@@ -1,0 +1,19 @@
+# Common node_modules and dist in subdirectories
+**/node_modules/
+**/dist/
+
+# Logs
+**/logs/
+**/*.log
+
+# Project specific
+client/.env.local
+server/.env
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor folders
+.vscode/
+.idea/
