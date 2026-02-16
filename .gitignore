@@ -1,14 +1,21 @@
-# Common node_modules and dist in subdirectories
+# Dependencies
 **/node_modules/
+
+# Build outputs
 **/dist/
+**/dist-ssr/
+
+# Environment variables
+.env
+**/.env
+**/.env.local
 
 # Logs
 **/logs/
 **/*.log
-
-# Project specific
-client/.env.local
-server/.env
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # OS files
 .DS_Store
@@ -17,3 +24,4 @@ Thumbs.db
 # Editor folders
 .vscode/
 .idea/
+*.sw?

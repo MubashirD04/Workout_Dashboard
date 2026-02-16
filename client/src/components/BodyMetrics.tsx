@@ -90,11 +90,11 @@ const BodyMetrics: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            <div className="bg-white shadow px-4 py-5 sm:rounded-lg sm:p-6">
-                <div className="md:grid md:grid-cols-3 md:gap-6">
+            <div className="glass-card p-6 sm:p-8">
+                <div className="md:grid md:grid-cols-3 md:gap-8">
                     <div className="md:col-span-1">
-                        <h3 className="text-lg font-medium leading-6 text-gray-900">Body Metrics</h3>
-                        <p className="mt-1 text-sm text-gray-500">
+                        <h3 className="text-xl font-bold text-white mb-2">Body Metrics</h3>
+                        <p className="text-sm text-slate-400">
                             Track your weight, body fat %, and measurements over time.
                         </p>
                     </div>
@@ -102,98 +102,98 @@ const BodyMetrics: React.FC = () => {
                         <form onSubmit={handleSubmit}>
                             <div className="grid grid-cols-6 gap-6">
                                 <div className="col-span-6 sm:col-span-3">
-                                    <label htmlFor="date" className="block text-sm font-medium text-gray-700">Date</label>
+                                    <label htmlFor="date" className="block text-sm font-medium text-slate-400 mb-1">Date</label>
                                     <input
                                         type="date"
                                         required
                                         value={date}
                                         onChange={(e) => setDate(e.target.value)}
-                                        className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                                        className="bg-slate-900 border border-white/10 text-white focus:ring-primary focus:border-primary block w-full shadow-sm sm:text-sm rounded-lg p-2"
                                     />
                                 </div>
 
-                                <div className="col-span-6"><hr className="my-2" /></div>
+                                <div className="col-span-6"><hr className="border-white/5 my-2" /></div>
 
                                 <div className="col-span-6 sm:col-span-3">
-                                    <label className="block text-sm font-medium text-gray-700">Weight (kg)</label>
+                                    <label className="block text-sm font-medium text-slate-400 mb-1">Weight (kg)</label>
                                     <input
                                         type="number"
                                         step="0.1"
                                         value={weight}
                                         onChange={(e) => setWeight(e.target.value)}
-                                        className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                                        className="bg-slate-900 border border-white/10 text-white focus:ring-primary focus:border-primary block w-full shadow-sm sm:text-sm rounded-lg p-2"
                                     />
                                 </div>
 
                                 <div className="col-span-6 sm:col-span-3">
-                                    <label className="block text-sm font-medium text-gray-700">Body Fat %</label>
+                                    <label className="block text-sm font-medium text-slate-400 mb-1">Body Fat %</label>
                                     <input
                                         type="number"
                                         step="0.1"
                                         value={bodyFat}
                                         onChange={(e) => setBodyFat(e.target.value)}
-                                        className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                                        className="bg-slate-900 border border-white/10 text-white focus:ring-primary focus:border-primary block w-full shadow-sm sm:text-sm rounded-lg p-2"
                                     />
                                 </div>
 
-                                <div className="col-span-6"><h4 className="text-sm font-medium text-gray-900">Measurements (cm)</h4></div>
+                                <div className="col-span-6"><h4 className="text-sm font-bold text-white uppercase tracking-wider">Measurements (cm)</h4></div>
 
                                 <div className="col-span-6 sm:col-span-2">
-                                    <label className="block text-sm font-medium text-gray-700">Chest</label>
+                                    <label className="block text-sm font-medium text-slate-400 mb-1">Chest</label>
                                     <input
                                         type="number"
                                         step="0.1"
                                         value={chest}
                                         onChange={(e) => setChest(e.target.value)}
-                                        className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                                        className="bg-slate-900 border border-white/10 text-white focus:ring-primary focus:border-primary block w-full shadow-sm sm:text-sm rounded-lg p-2"
                                     />
                                 </div>
                                 <div className="col-span-6 sm:col-span-2">
-                                    <label className="block text-sm font-medium text-gray-700">Waist</label>
+                                    <label className="block text-sm font-medium text-slate-400 mb-1">Waist</label>
                                     <input
                                         type="number"
                                         step="0.1"
                                         value={waist}
                                         onChange={(e) => setWaist(e.target.value)}
-                                        className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                                        className="bg-slate-900 border border-white/10 text-white focus:ring-primary focus:border-primary block w-full shadow-sm sm:text-sm rounded-lg p-2"
                                     />
                                 </div>
                                 <div className="col-span-6 sm:col-span-2">
-                                    <label className="block text-sm font-medium text-gray-700">Hips</label>
+                                    <label className="block text-sm font-medium text-slate-400 mb-1">Hips</label>
                                     <input
                                         type="number"
                                         step="0.1"
                                         value={hips}
                                         onChange={(e) => setHips(e.target.value)}
-                                        className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                                        className="bg-slate-900 border border-white/10 text-white focus:ring-primary focus:border-primary block w-full shadow-sm sm:text-sm rounded-lg p-2"
                                     />
                                 </div>
                                 <div className="col-span-6 sm:col-span-2">
-                                    <label className="block text-sm font-medium text-gray-700">Bicep</label>
+                                    <label className="block text-sm font-medium text-slate-400 mb-1">Bicep</label>
                                     <input
                                         type="number"
                                         step="0.1"
                                         value={bicep}
                                         onChange={(e) => setBicep(e.target.value)}
-                                        className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                                        className="bg-slate-900 border border-white/10 text-white focus:ring-primary focus:border-primary block w-full shadow-sm sm:text-sm rounded-lg p-2"
                                     />
                                 </div>
                                 <div className="col-span-6 sm:col-span-2">
-                                    <label className="block text-sm font-medium text-gray-700">Thigh</label>
+                                    <label className="block text-sm font-medium text-slate-400 mb-1">Thigh</label>
                                     <input
                                         type="number"
                                         step="0.1"
                                         value={thigh}
                                         onChange={(e) => setThigh(e.target.value)}
-                                        className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                                        className="bg-slate-900 border border-white/10 text-white focus:ring-primary focus:border-primary block w-full shadow-sm sm:text-sm rounded-lg p-2"
                                     />
                                 </div>
                             </div>
 
-                            <div className="mt-4 flex justify-end">
+                            <div className="mt-6 flex justify-end">
                                 <button
                                     type="submit"
-                                    className="ml-3 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                    className="inline-flex justify-center py-2 px-6 border border-transparent shadow-glow text-sm font-bold rounded-lg text-white bg-primary hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all"
                                 >
                                     Log Metrics
                                 </button>
@@ -203,18 +203,38 @@ const BodyMetrics: React.FC = () => {
                 </div>
             </div>
 
-            <div className="bg-white shadow px-4 py-5 sm:rounded-lg sm:p-6">
-                <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">Weight History</h3>
+            <div className="glass-card p-6 sm:p-8">
+                <h3 className="text-xl font-bold text-white mb-6">Weight History</h3>
                 <div className="h-72">
                     <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={metrics}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="date" tickFormatter={formatXAxis} />
-                            <YAxis domain={['auto', 'auto']} />
-                            <Tooltip labelFormatter={(label) => new Date(label).toLocaleDateString()} />
-                            <Legend />
-                            <Line type="monotone" dataKey="weight" stroke="#2563eb" strokeWidth={2} activeDot={{ r: 8 }} name="Weight (kg)" />
-                            <Line type="monotone" dataKey="body_fat_perc" stroke="#dc2626" name="Body Fat %" />
+                            <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+                            <XAxis
+                                dataKey="date"
+                                tickFormatter={formatXAxis}
+                                stroke="#94a3b8"
+                                tick={{ fill: '#94a3b8', fontSize: 12 }}
+                                tickLine={false}
+                                axisLine={false}
+                            />
+                            <YAxis
+                                domain={['auto', 'auto']}
+                                stroke="#94a3b8"
+                                tick={{ fill: '#94a3b8', fontSize: 12 }}
+                                tickLine={false}
+                                axisLine={false}
+                            />
+                            <Tooltip
+                                contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc' }}
+                                labelFormatter={(label) => new Date(label).toLocaleDateString()}
+                            />
+                            <Legend
+                                verticalAlign="top"
+                                height={36}
+                                formatter={(value) => <span className="text-slate-400 text-sm">{value}</span>}
+                            />
+                            <Line type="monotone" dataKey="weight" stroke="#F97316" strokeWidth={3} dot={{ r: 4, fill: '#1e293b', stroke: '#F97316', strokeWidth: 2 }} activeDot={{ r: 8 }} name="Weight (kg)" />
+                            <Line type="monotone" dataKey="body_fat_perc" stroke="#334155" strokeWidth={2} name="Body Fat %" />
                         </LineChart>
                     </ResponsiveContainer>
                 </div>

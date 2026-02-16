@@ -1,5 +1,5 @@
 import express from 'express';
-import { createWorkout, getWorkouts, getWorkoutDetails, deleteWorkout } from '../controllers/workoutController.js';
+import { createWorkout, getWorkouts, getWorkoutDetails, deleteWorkout, updateWorkout } from '../controllers/workoutController.js';
 import {
     createCardioLog, getCardioLogs, deleteCardioLog,
     createBodyMetric, getBodyMetrics,
@@ -13,6 +13,7 @@ const router = express.Router();
 router.get('/workouts', getWorkouts);
 router.post('/workouts', createWorkout);
 router.get('/workouts/:id', getWorkoutDetails);
+router.put('/workouts/:id', updateWorkout);
 router.delete('/workouts/:id', deleteWorkout);
 
 // Cardio Routes

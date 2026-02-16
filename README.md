@@ -1,30 +1,34 @@
 # Fitness Dashboard
 
-A comprehensive fitness and workout tracking application designed to help users monitor their physical progress, nutrition, and workout routines.
+A high-performance fitness and workout tracking application designed to help users monitor their physical progress, nutrition, and workout routines with rich data visualizations.
 
 ## Project Structure
 
 The project is divided into two main parts:
 
-- **`client/`**: The frontend application built with React, Vite, and Tailwind CSS.
-- **`server/`**: The backend API built with Node.js, Express, TypeScript, and PostgreSQL.
+- **`client/`**: Frontend application built with **React**, **Vite**, **Tailwind CSS**, and **Recharts**.
+- **`server/`**: Backend API built with **Node.js**, **Express**, **TypeScript**, and **PostgreSQL**.
 
 ## Features
 
-- **Workout Logging**: Track your exercises, sets, reps, and weights.
-- **Cardio Tracking**: Monitor your running, cycling, or other cardio activities.
-- **Body Metrics**: Keep a record of your weight and other body measurements.
-- **Nutrition Tracking**: Log your daily calorie and macro intake.
-- **Progress Photos**: Visual timeline of your fitness journey.
-- **Analytics**: Data visualization using Recharts to see your progress over time.
+- **📊 Advanced Analytics**:
+    - **Volume Chart**: Track total weight moved over time.
+    - **Consistency Heatmap**: Visualize workout frequency.
+    - **Athlete Radar**: Compare strength, endurance, and consistency metrics.
+    - **Macro Donut**: Real-time breakdown of calorie and macro intake.
+- **🏋️ Workout Logging**: Full exercise tracking with sets, reps, and weights.
+- **🏃 Cardio Tracking**: Log distance and duration for various activities.
+- **📏 Body Metrics**: Comprehensive tracking of weight and body measurements.
+- **🍎 Nutrition Tracker**: Monitor daily calories and macro targets.
+- **🖼️ Progress Timeline**: Visual photo journey of your transformation.
 
 ## Quick Start
 
 ### Prerequisites
 
-- Node.js (v18 or higher)
-- PostgreSQL
-- npm or yarn
+- **Node.js**: v18 or higher
+- **PostgreSQL**: Running instance
+- **npm** or **yarn**
 
 ### Setup
 
@@ -38,7 +42,9 @@ The project is divided into two main parts:
     ```bash
     cd server
     npm install
-    # Setup your .env file (refer to .env.example)
+    # Create .env based on server/.env.example
+    # Initialize database
+    npx tsx src/db/init.ts
     npm run dev
     ```
 

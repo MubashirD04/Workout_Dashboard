@@ -28,10 +28,17 @@ npm install
 
 ## Features & Components
 
-- **Dashboard**: Overview of recent activities and progress charts.
-- **Workout Planner**: Create and track workout sessions.
-- **Progress Tracking**: Charts for weight, calorie intake, and cardio performance.
-- **Photo Timeline**: View your physical transformation over time.
+- **🏠 Dashboard Home**: Overview of recent activities with key statistics.
+- **💪 Workout Log**: Comprehensive exercise management with set-by-set tracking.
+- **🏃 Cardio Tracker**: Activity logging for runs, cycles, and more.
+- **📏 Body Metrics**: Historical tracking of weight and body measurements.
+- **🍎 Nutrition Tracker**: Daily log for calories and macros with visual donut chart.
+- **📸 Progress Photos**: Visual diary of physical transformation.
+- **📈 Data Visualizations**:
+    - **VolumeLineChart**: Strength progress over time.
+    - **ConsistencyHeatmap**: Active days visualization.
+    - **AthleteRadarChart**: Multi-dimensional performance metrics.
+    - **MacroDonutChart**: Visual macro breakdown.
 
 ## Configuration
 

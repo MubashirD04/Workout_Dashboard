@@ -1,7 +1,10 @@
-import { Pool } from 'pg';
+import { Pool, types } from 'pg';
 import dotenv from 'dotenv';
 
 dotenv.config();
+
+// Fix for date shifting: Return DATE OID 1082 as a string
+types.setTypeParser(1082, (val) => val);
 
 const pool = new Pool({
     user: process.env.DB_USER,

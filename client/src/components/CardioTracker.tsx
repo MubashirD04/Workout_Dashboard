@@ -84,11 +84,11 @@ const CardioTracker: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            <div className="bg-white shadow px-4 py-5 sm:rounded-lg sm:p-6">
-                <div className="md:grid md:grid-cols-3 md:gap-6">
+            <div className="glass-card p-6 sm:p-8">
+                <div className="md:grid md:grid-cols-3 md:gap-8">
                     <div className="md:col-span-1">
-                        <h3 className="text-lg font-medium leading-6 text-gray-900">Track Cardio</h3>
-                        <p className="mt-1 text-sm text-gray-500">
+                        <h3 className="text-xl font-bold text-white mb-2">Track Cardio</h3>
+                        <p className="text-sm text-slate-400">
                             Log your running, cycling, swimming, or other cardio activities.
                         </p>
                     </div>
@@ -96,7 +96,7 @@ const CardioTracker: React.FC = () => {
                         <form onSubmit={handleSubmit}>
                             <div className="grid grid-cols-6 gap-6">
                                 <div className="col-span-6 sm:col-span-3">
-                                    <label htmlFor="date" className="block text-sm font-medium text-gray-700">
+                                    <label htmlFor="date" className="block text-sm font-medium text-slate-400 mb-1">
                                         Date
                                     </label>
                                     <input
@@ -106,12 +106,12 @@ const CardioTracker: React.FC = () => {
                                         required
                                         value={date}
                                         onChange={(e) => setDate(e.target.value)}
-                                        className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                                        className="bg-slate-900 border border-white/10 text-white focus:ring-primary focus:border-primary block w-full shadow-sm sm:text-sm rounded-lg p-2"
                                     />
                                 </div>
 
                                 <div className="col-span-6 sm:col-span-3">
-                                    <label htmlFor="type" className="block text-sm font-medium text-gray-700">
+                                    <label htmlFor="type" className="block text-sm font-medium text-slate-400 mb-1">
                                         Type
                                     </label>
                                     <select
@@ -119,7 +119,7 @@ const CardioTracker: React.FC = () => {
                                         name="type"
                                         value={type}
                                         onChange={(e) => setType(e.target.value)}
-                                        className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                        className="bg-slate-900 border border-white/10 text-white focus:ring-primary focus:border-primary block w-full shadow-sm sm:text-sm rounded-lg p-2"
                                     >
                                         <option>Run</option>
                                         <option>Cycle</option>
@@ -131,7 +131,7 @@ const CardioTracker: React.FC = () => {
                                 </div>
 
                                 <div className="col-span-6 sm:col-span-3">
-                                    <label htmlFor="distance" className="block text-sm font-medium text-gray-700">
+                                    <label htmlFor="distance" className="block text-sm font-medium text-slate-400 mb-1">
                                         Distance (km)
                                     </label>
                                     <input
@@ -142,12 +142,12 @@ const CardioTracker: React.FC = () => {
                                         required
                                         value={distance}
                                         onChange={(e) => setDistance(e.target.value)}
-                                        className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                                        className="bg-slate-900 border border-white/10 text-white focus:ring-primary focus:border-primary block w-full shadow-sm sm:text-sm rounded-lg p-2"
                                     />
                                 </div>
 
                                 <div className="col-span-6 sm:col-span-3">
-                                    <label htmlFor="duration" className="block text-sm font-medium text-gray-700">
+                                    <label htmlFor="duration" className="block text-sm font-medium text-slate-400 mb-1">
                                         Duration (minutes)
                                     </label>
                                     <input
@@ -157,12 +157,12 @@ const CardioTracker: React.FC = () => {
                                         required
                                         value={duration}
                                         onChange={(e) => setDuration(e.target.value)}
-                                        className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                                        className="bg-slate-900 border border-white/10 text-white focus:ring-primary focus:border-primary block w-full shadow-sm sm:text-sm rounded-lg p-2"
                                     />
                                 </div>
 
                                 <div className="col-span-6">
-                                    <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
+                                    <label htmlFor="notes" className="block text-sm font-medium text-slate-400 mb-1">
                                         Notes
                                     </label>
                                     <div className="mt-1">
@@ -172,16 +172,16 @@ const CardioTracker: React.FC = () => {
                                             rows={3}
                                             value={notes}
                                             onChange={(e) => setNotes(e.target.value)}
-                                            className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                                            className="bg-slate-900 border border-white/10 text-white shadow-sm focus:ring-primary focus:border-primary block w-full sm:text-sm rounded-lg p-2"
                                         />
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="mt-4 flex justify-end">
+                            <div className="mt-6 flex justify-end">
                                 <button
                                     type="submit"
-                                    className="ml-3 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                    className="inline-flex justify-center py-2 px-6 border border-transparent shadow-glow text-sm font-bold rounded-lg text-white bg-primary hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all"
                                 >
                                     Log Cardio
                                 </button>
@@ -191,65 +191,61 @@ const CardioTracker: React.FC = () => {
                 </div>
             </div>
 
-            <div className="flex flex-col">
-                <div className="-my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
-                    <div className="py-2 align-middle inline-block min-w-full sm:px-6 lg:px-8">
-                        <div className="shadow overflow-hidden border-b border-gray-200 sm:rounded-lg">
-                            <table className="min-w-full divide-y divide-gray-200">
-                                <thead className="bg-gray-50">
-                                    <tr>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Date
-                                        </th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Type
-                                        </th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Stats
-                                        </th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Pace
-                                        </th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Notes
-                                        </th>
-                                        <th scope="col" className="relative px-6 py-3">
-                                            <span className="sr-only">Delete</span>
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody className="bg-white divide-y divide-gray-200">
-                                    {logs.map((log) => (
-                                        <tr key={log.id}>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                {new Date(log.date).toLocaleDateString()}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                {log.type}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                {log.distance} km / {log.duration} min
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                {calculatePace(log.distance, log.duration)} min/km
-                                            </td>
-                                            <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
-                                                {log.notes}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                <button
-                                                    onClick={() => handleDelete(log.id)}
-                                                    className="text-red-600 hover:text-red-900"
-                                                >
-                                                    Delete
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+            <div className="glass-card overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-white/5">
+                        <thead className="bg-white/5">
+                            <tr>
+                                <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">
+                                    Date
+                                </th>
+                                <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">
+                                    Type
+                                </th>
+                                <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">
+                                    Stats
+                                </th>
+                                <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">
+                                    Pace
+                                </th>
+                                <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">
+                                    Notes
+                                </th>
+                                <th scope="col" className="relative px-6 py-4">
+                                    <span className="sr-only">Delete</span>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                            {logs.map((log) => (
+                                <tr key={log.id} className="hover:bg-white/5 transition-colors">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-primary">
+                                        {new Date(log.date).toLocaleDateString()}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                                        {log.type}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-400">
+                                        {log.distance} km / {log.duration} min
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-400">
+                                        {calculatePace(log.distance, log.duration)} min/km
+                                    </td>
+                                    <td className="px-6 py-4 text-sm text-slate-400 max-w-xs truncate italic">
+                                        {log.notes}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                        <button
+                                            onClick={() => handleDelete(log.id)}
+                                            className="text-red-400 hover:text-red-300 transition-colors"
+                                        >
+                                            Delete
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>

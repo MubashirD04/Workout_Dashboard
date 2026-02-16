@@ -20,11 +20,23 @@ npm install
 
 ### Environment Variables
 
-Create a `.env` file in the root of the `server/` directory based on `.env.example`:
+Create a `.env` file in the root of the `server/` directory:
 
 ```env
 DATABASE_URL=postgresql://user:password@localhost:5432/dashboard
 PORT=5000
+```
+
+### Database Initialization
+
+To set up the database tables:
+```bash
+npx tsx src/db/init.ts
+```
+
+Optional: To seed the database with initial data:
+```bash
+npx tsx src/db/seed.ts
 ```
 
 ### Scripts
@@ -39,6 +51,7 @@ PORT=5000
 - `GET /api/workouts`: Get all workouts.
 - `POST /api/workouts`: Create a new workout.
 - `GET /api/workouts/:id`: Get details for a specific workout.
+- `PUT /api/workouts/:id`: Update an existing workout.
 - `DELETE /api/workouts/:id`: Delete a workout.
 
 ### Cardio
