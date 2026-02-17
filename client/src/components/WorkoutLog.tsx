@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import WorkoutMaxWeightChart from './WorkoutMaxWeightChart';
 
 interface Exercise {
     exercise_name: string;
@@ -11,6 +12,7 @@ interface Workout {
     id: number;
     date: string;
     time: string | null;
+    duration: number | null;
     notes: string;
     exercises?: Exercise[];
 }
@@ -22,6 +24,7 @@ const WorkoutLog: React.FC = () => {
         const now = new Date();
         return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     });
+    const [duration, setDuration] = useState<number>(60);
     const [notes, setNotes] = useState('');
     const [currentExercises, setCurrentExercises] = useState<Exercise[]>([]);
 
@@ -98,6 +101,7 @@ const WorkoutLog: React.FC = () => {
                     notes,
                     exercises: currentExercises,
                     time: time || null,
+                    duration: duration || null,
                 }),
             });
 
@@ -123,6 +127,7 @@ const WorkoutLog: React.FC = () => {
         setDate(new Date().toISOString().split('T')[0]);
         const now = new Date();
         setTime(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
+        setDuration(60);
         setIsExpanded(false);
     };
 
@@ -140,6 +145,7 @@ const WorkoutLog: React.FC = () => {
 
                 setDate(formattedDate);
                 setTime(data.time || '');
+                setDuration(data.duration || 0);
                 setNotes(data.notes || '');
                 setCurrentExercises(data.exercises || []);
                 // Scroll to top to see the form
@@ -220,18 +226,18 @@ const WorkoutLog: React.FC = () => {
                                 </p>
                             </div>
                         </div>
-                        <div className={`flex items-center gap-3 transition-all duration-500 ease-in-out ${isExpanded ? 'opacity-100 translate-x-0 pointer-events-auto' : 'opacity-0 translate-x-4 pointer-events-none'}`}>
-                            <div className="flex flex-col items-end">
-                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Workout Date</label>
+                        <div className={`flex items-center gap-6 transition-all duration-500 ease-in-out ${isExpanded ? 'opacity-100 translate-x-0 pointer-events-auto' : 'opacity-0 translate-x-4 pointer-events-none'}`}>
+                            <div className="flex flex-col items-center">
+                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 w-full text-center">Workout Date</label>
                                 <input
                                     type="date"
                                     value={date}
                                     onClick={(e) => e.stopPropagation()}
                                     onChange={(e) => setDate(e.target.value)}
-                                    className="bg-slate-900 border border-white/10 text-white rounded-lg px-3 py-1.5 text-xs focus:ring-primary focus:border-primary outline-none hover:border-primary/50 transition-colors"
+                                    className="bg-slate-900 border border-white/10 text-white rounded-lg px-3 py-1.5 text-xs focus:ring-primary focus:border-primary outline-none hover:border-primary/50 transition-colors text-center"
                                 />
                             </div>
-                            <div className="flex flex-col items-end relative z-50">
+                            <div className="flex flex-col items-center relative z-50">
                                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 w-full text-center">Optional Time</label>
                                 <div className="relative">
                                     <input
@@ -261,6 +267,18 @@ const WorkoutLog: React.FC = () => {
                                         </div>
                                     )}
                                 </div>
+                            </div>
+                            <div className="flex flex-col items-center">
+                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 w-full text-center">Duration (min)</label>
+                                <input
+                                    type="number"
+                                    value={duration}
+                                    onClick={(e) => e.stopPropagation()}
+                                    onChange={(e) => setDuration(Number(e.target.value))}
+                                    onFocus={(e) => e.target.select()}
+                                    className="bg-slate-900 border border-white/10 text-white rounded-lg px-3 py-1.5 text-xs focus:ring-primary focus:border-primary outline-none hover:border-primary/50 transition-colors w-20 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    min="0"
+                                />
                             </div>
                         </div>
                     </div>
@@ -404,11 +422,13 @@ const WorkoutLog: React.FC = () => {
                         </div>
                     </div>
                 </div>
+
+                {workouts.length > 0 && <WorkoutMaxWeightChart workouts={workouts} />}
             </div>
 
             {/* Right Column: Recent History (4 cols) */}
             <div className="lg:col-span-4">
-                <div className="glass-card p-6 h-full flex flex-col">
+                <div className="glass-card p-6 sm:p-8 h-full flex flex-col">
                     <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
                         <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                         Recent History
@@ -417,8 +437,6 @@ const WorkoutLog: React.FC = () => {
                     <div className="space-y-4 overflow-y-auto max-h-[800px] pr-2 custom-scrollbar">
                         {workouts.map((workout) => {
                             const volume = calculateVolume(workout.exercises);
-                            // Mocking duration for now
-                            const durationMock = Math.floor(Math.random() * (90 - 45 + 1) + 45);
 
                             return (
                                 <div
@@ -459,7 +477,7 @@ const WorkoutLog: React.FC = () => {
                                         </div>
                                         <div className="flex items-center gap-1.5" title="Duration">
                                             <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                            <span>{durationMock} min</span>
+                                            <span>{workout.duration || 0} min</span>
                                         </div>
                                     </div>
 

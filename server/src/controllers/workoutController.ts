@@ -31,7 +31,7 @@ export const getWorkouts = async (req: Request, res: Response) => {
 };
 
 export const createWorkout = async (req: Request, res: Response) => {
-    const { date, notes, exercises, time } = req.body;
+    const { date, notes, exercises, time, duration } = req.body;
 
     if (!date) {
         return res.status(400).json({ error: 'Date is required' });
@@ -57,8 +57,8 @@ export const createWorkout = async (req: Request, res: Response) => {
 
         // Insert workout
         const workoutResult = await client.query(
-            'INSERT INTO workouts (date, notes, time) VALUES ($1, $2, $3) RETURNING id',
-            [date, notes, time || null]
+            'INSERT INTO workouts (date, notes, time, duration) VALUES ($1, $2, $3, $4) RETURNING id',
+            [date, notes, time || null, duration || null]
         );
         const workoutId = workoutResult.rows[0].id;
 
@@ -119,7 +119,7 @@ export const deleteWorkout = async (req: Request, res: Response) => {
 
 export const updateWorkout = async (req: Request, res: Response) => {
     const { id } = req.params;
-    const { date, notes, exercises, time } = req.body;
+    const { date, notes, exercises, time, duration } = req.body;
 
     if (!date) {
         return res.status(400).json({ error: 'Date is required' });
@@ -145,8 +145,8 @@ export const updateWorkout = async (req: Request, res: Response) => {
 
         // Update workout
         await client.query(
-            'UPDATE workouts SET date = $1, notes = $2, time = $3 WHERE id = $4',
-            [date, notes, time || null, id]
+            'UPDATE workouts SET date = $1, notes = $2, time = $3, duration = $4 WHERE id = $5',
+            [date, notes, time || null, duration || null, id]
         );
 
         // Update exercises: Delete existing and re-insert new ones

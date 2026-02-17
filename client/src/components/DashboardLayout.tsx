@@ -19,17 +19,20 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 
     return (
         <div className="min-h-screen bg-slate-950 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black text-white selection:bg-primary/30">
-            <header className="sticky top-0 z-50 glass-card rounded-none border-b border-white/5 shadow-glow/20">
+            <header className="sticky top-0 z-50 bg-surface/80 backdrop-blur-lg border-b border-white/5 shadow-glow/20">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between h-16">
-                        <div className="flex items-center gap-8">
-                            <div className="flex-shrink-0 flex items-center gap-2">
-                                <div className="w-8 h-8 rounded bg-primary shadow-glow flex items-center justify-center">
-                                    <span className="font-bold text-white">FT</span>
-                                </div>
-                                <h1 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400 tracking-tight">FitTrack</h1>
+                    <div className="grid grid-cols-3 h-16 items-center">
+                        {/* Logo - Column 1 */}
+                        <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded bg-primary shadow-glow flex items-center justify-center">
+                                <span className="font-bold text-white">FT</span>
                             </div>
-                            <div className="hidden sm:flex sm:space-x-1">
+                            <h1 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400 tracking-tight">FitTrack</h1>
+                        </div>
+
+                        {/* Navigation Items - Column 2 (Centered) */}
+                        <div className="hidden sm:flex justify-center items-center">
+                            <nav className="flex space-x-1">
                                 {navItems.map((item) => {
                                     const isActive = location.pathname === item.path;
                                     return (
@@ -39,7 +42,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                                             className={`${isActive
                                                 ? 'text-primary'
                                                 : 'text-slate-400 hover:text-white hover:bg-white/5'
-                                                } px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 relative group`}
+                                                } px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 relative group truncate`}
                                         >
                                             {item.label}
                                             {isActive && (
@@ -48,10 +51,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                                         </Link>
                                     );
                                 })}
-                            </div>
+                            </nav>
                         </div>
-                        <div className="flex items-center">
-                            <div className="h-8 w-8 rounded-full bg-slate-800 border border-white/10 flex items-center justify-center text-xs text-slate-400">
+
+                        {/* Profile - Column 3 (Right aligned) */}
+                        <div className="flex items-center justify-end">
+                            <div className="h-8 w-8 rounded-full bg-slate-800 border border-white/10 flex items-center justify-center text-xs text-slate-400 cursor-pointer hover:border-primary/50 transition-colors">
                                 MP
                             </div>
                         </div>

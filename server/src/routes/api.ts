@@ -1,7 +1,7 @@
 import express from 'express';
 import { createWorkout, getWorkouts, getWorkoutDetails, deleteWorkout, updateWorkout } from '../controllers/workoutController.js';
 import {
-    createCardioLog, getCardioLogs, deleteCardioLog,
+    createCardioLog, getCardioLogs, deleteCardioLog, getCardioLogById, updateCardioLog,
     createBodyMetric, getBodyMetrics,
     createNutritionLog, getNutritionLogs,
     createPhotoLog, getPhotoLogs
@@ -19,6 +19,8 @@ router.delete('/workouts/:id', deleteWorkout);
 // Cardio Routes
 router.get('/cardio', getCardioLogs);
 router.post('/cardio', createCardioLog);
+router.get('/cardio/:id', getCardioLogById);
+router.put('/cardio/:id', updateCardioLog);
 router.delete('/cardio/:id', deleteCardioLog);
 
 // Body Metrics Routes

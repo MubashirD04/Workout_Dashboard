@@ -3,7 +3,7 @@ import pool from '../db/index.js';
 
 // Cardio
 export const createCardioLog = async (req: Request, res: Response) => {
-    const { date, type, distance, duration, notes } = req.body;
+    const { date, type, distance, duration, notes, time } = req.body;
 
     if (!date || !type) {
         return res.status(400).json({ error: 'Date and Type are required' });
@@ -11,12 +11,49 @@ export const createCardioLog = async (req: Request, res: Response) => {
 
     try {
         const result = await pool.query(
-            'INSERT INTO cardio_logs (date, type, distance, duration, notes) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-            [date, type, distance, duration, notes]
+            'INSERT INTO cardio_logs (date, type, distance, duration, notes, time) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+            [date, type, distance, duration, notes, time || null]
         );
         res.status(201).json(result.rows[0]);
     } catch (error) {
         console.error('Error creating cardio log:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+export const getCardioLogById = async (req: Request, res: Response) => {
+    const { id } = req.params;
+    try {
+        const result = await pool.query('SELECT * FROM cardio_logs WHERE id = $1', [id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Cardio log not found' });
+        }
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Error fetching cardio log details:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+export const updateCardioLog = async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { date, type, distance, duration, notes, time } = req.body;
+
+    if (!date || !type) {
+        return res.status(400).json({ error: 'Date and Type are required' });
+    }
+
+    try {
+        const result = await pool.query(
+            'UPDATE cardio_logs SET date = $1, type = $2, distance = $3, duration = $4, notes = $5, time = $6 WHERE id = $7 RETURNING *',
+            [date, type, distance, duration, notes, time || null, id]
+        );
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Cardio log not found' });
+        }
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Error updating cardio log:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 };
