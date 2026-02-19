@@ -1,158 +1,114 @@
-import type { Request, Response } from 'express';
-import pool from '../db/index.js';
+import type { Request, Response, NextFunction } from 'express';
+import { trackingService } from '../services/trackingService.js';
+import { sendSuccess, sendError } from '../utils/responseHandler.js';
 
 // Cardio
-export const createCardioLog = async (req: Request, res: Response) => {
-    const { date, type, distance, duration, notes, time } = req.body;
-
-    if (!date || !type) {
-        return res.status(400).json({ error: 'Date and Type are required' });
-    }
-
+export const createCardioLog = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const result = await pool.query(
-            'INSERT INTO cardio_logs (date, type, distance, duration, notes, time) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-            [date, type, distance, duration, notes, time || null]
-        );
-        res.status(201).json(result.rows[0]);
+        const { date, type } = req.body;
+        if (!date || !type) return sendError(res, 'Date and Type are required', 400);
+
+        const log = await trackingService.createCardio(req.body);
+        sendSuccess(res, log, 201);
     } catch (error) {
-        console.error('Error creating cardio log:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        next(error);
     }
 };
 
-export const getCardioLogById = async (req: Request, res: Response) => {
-    const { id } = req.params;
+export const getCardioLogById = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const result = await pool.query('SELECT * FROM cardio_logs WHERE id = $1', [id]);
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'Cardio log not found' });
-        }
-        res.json(result.rows[0]);
+        const log = await trackingService.getCardio(req.params.id as string);
+        if (!log) return sendError(res, 'Cardio log not found', 404);
+        sendSuccess(res, log);
     } catch (error) {
-        console.error('Error fetching cardio log details:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        next(error);
     }
 };
 
-export const updateCardioLog = async (req: Request, res: Response) => {
-    const { id } = req.params;
-    const { date, type, distance, duration, notes, time } = req.body;
-
-    if (!date || !type) {
-        return res.status(400).json({ error: 'Date and Type are required' });
-    }
-
+export const updateCardioLog = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const result = await pool.query(
-            'UPDATE cardio_logs SET date = $1, type = $2, distance = $3, duration = $4, notes = $5, time = $6 WHERE id = $7 RETURNING *',
-            [date, type, distance, duration, notes, time || null, id]
-        );
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'Cardio log not found' });
-        }
-        res.json(result.rows[0]);
+        const { date, type } = req.body;
+        if (!date || !type) return sendError(res, 'Date and Type are required', 400);
+
+        const log = await trackingService.updateCardio(req.params.id as string, req.body);
+        if (!log) return sendError(res, 'Cardio log not found', 404);
+        sendSuccess(res, log);
     } catch (error) {
-        console.error('Error updating cardio log:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        next(error);
     }
 };
 
-export const getCardioLogs = async (req: Request, res: Response) => {
+export const getCardioLogs = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const result = await pool.query('SELECT * FROM cardio_logs ORDER BY date DESC');
-        res.json(result.rows);
+        const logs = await trackingService.getAllCardio();
+        sendSuccess(res, logs);
     } catch (error) {
-        console.error('Error fetching cardio logs:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        next(error);
     }
 };
 
-export const deleteCardioLog = async (req: Request, res: Response) => {
-    const { id } = req.params;
+export const deleteCardioLog = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        await pool.query('DELETE FROM cardio_logs WHERE id = $1', [id]);
-        res.json({ message: 'Cardio log deleted successfully' });
+        await trackingService.deleteCardio(req.params.id as string);
+        sendSuccess(res, { message: 'Cardio log deleted successfully' });
     } catch (error) {
-        console.error('Error deleting cardio log:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        next(error);
     }
 };
 
 // Body Metrics
-export const createBodyMetric = async (req: Request, res: Response) => {
-    const { date, weight, body_fat_perc, chest, waist, hips, bicep, thigh } = req.body;
-
+export const createBodyMetric = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const result = await pool.query(
-            'INSERT INTO body_metrics (date, weight, body_fat_perc, chest, waist, hips, bicep, thigh) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
-            [date, weight, body_fat_perc, chest, waist, hips, bicep, thigh]
-        );
-        res.status(201).json(result.rows[0]);
+        const metric = await trackingService.createMetric(req.body);
+        sendSuccess(res, metric, 201);
     } catch (error) {
-        console.error('Error creating body metric:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        next(error);
     }
 };
 
-export const getBodyMetrics = async (req: Request, res: Response) => {
+export const getBodyMetrics = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const result = await pool.query('SELECT * FROM body_metrics ORDER BY date DESC');
-        res.json(result.rows);
+        const metrics = await trackingService.getAllMetrics();
+        sendSuccess(res, metrics);
     } catch (error) {
-        console.error('Error fetching body metrics:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        next(error);
     }
 };
 
 // Nutrition
-export const createNutritionLog = async (req: Request, res: Response) => {
-    const { date, calories, protein, carbs, fat } = req.body;
-
+export const createNutritionLog = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const result = await pool.query(
-            'INSERT INTO nutrition_logs (date, calories, protein, carbs, fat) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-            [date, calories, protein, carbs, fat]
-        );
-        res.status(201).json(result.rows[0]);
+        const log = await trackingService.createNutrition(req.body);
+        sendSuccess(res, log, 201);
     } catch (error) {
-        console.error('Error creating nutrition log:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        next(error);
     }
 };
 
-export const getNutritionLogs = async (req: Request, res: Response) => {
+export const getNutritionLogs = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const result = await pool.query('SELECT * FROM nutrition_logs ORDER BY date DESC');
-        res.json(result.rows);
+        const logs = await trackingService.getAllNutrition();
+        sendSuccess(res, logs);
     } catch (error) {
-        console.error('Error fetching nutrition logs:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        next(error);
     }
 };
 
 // Photos
-export const createPhotoLog = async (req: Request, res: Response) => {
-    const { date, photo_url, notes } = req.body;
-
+export const createPhotoLog = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const result = await pool.query(
-            'INSERT INTO progress_photos (date, photo_url, notes) VALUES ($1, $2, $3) RETURNING *',
-            [date, photo_url, notes]
-        );
-        res.status(201).json(result.rows[0]);
+        const log = await trackingService.createPhoto(req.body);
+        sendSuccess(res, log, 201);
     } catch (error) {
-        console.error('Error creating photo log:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        next(error);
     }
 };
 
-export const getPhotoLogs = async (req: Request, res: Response) => {
+export const getPhotoLogs = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const result = await pool.query('SELECT * FROM progress_photos ORDER BY date DESC');
-        res.json(result.rows);
+        const logs = await trackingService.getAllPhotos();
+        sendSuccess(res, logs);
     } catch (error) {
-        console.error('Error fetching photo logs:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        next(error);
     }
 };

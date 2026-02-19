@@ -34,9 +34,8 @@ const CardioProgressChart: React.FC<Props> = ({ logs }) => {
         return types.sort();
     }, [logs]);
 
-    // Update selected type if current selection no longer exists in logs, 
-    // but only if logs actually have items.
-    useMemo(() => {
+    // Update selected type if current selection no longer exists in logs
+    React.useEffect(() => {
         if (logs.length > 0 && !activityTypes.includes(selectedType)) {
             setSelectedType(activityTypes[0]);
         }

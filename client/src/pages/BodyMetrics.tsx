@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
     LineChart,
     Line,
@@ -9,6 +9,12 @@ import {
     Legend,
     ResponsiveContainer,
 } from 'recharts';
+import { metricsApi } from '../api/trackingApi';
+import { useFetch } from '../hooks/useFetch';
+import { getCurrentDate } from '../utils/dateUtils';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Card } from '../components/ui/Card';
 
 interface BodyMetric {
     id: number;
@@ -23,8 +29,13 @@ interface BodyMetric {
 }
 
 const BodyMetrics: React.FC = () => {
-    const [metrics, setMetrics] = useState<BodyMetric[]>([]);
-    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+    const { data, refresh: refreshMetrics } = useFetch(async () => {
+        const result = await metricsApi.getAll();
+        return Array.isArray(result) ? result.sort((a: BodyMetric, b: BodyMetric) => new Date(a.date).getTime() - new Date(b.date).getTime()) : [];
+    });
+    const metrics = data || [];
+
+    const [date, setDate] = useState(getCurrentDate());
 
     // Form State
     const [weight, setWeight] = useState('');
@@ -35,65 +46,46 @@ const BodyMetrics: React.FC = () => {
     const [bicep, setBicep] = useState('');
     const [thigh, setThigh] = useState('');
 
-    useEffect(() => {
-        fetchMetrics();
-    }, []);
-
-    const fetchMetrics = async () => {
-        try {
-            const response = await fetch('http://localhost:5000/api/metrics');
-            if (response.ok) {
-                const data = await response.json();
-                // Sort by date ascending for charts
-                setMetrics(data.sort((a: BodyMetric, b: BodyMetric) => new Date(a.date).getTime() - new Date(b.date).getTime()));
-            }
-        } catch (error) {
-            console.error('Error fetching metrics:', error);
-        }
-    };
-
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const response = await fetch('http://localhost:5000/api/metrics', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    date,
-                    weight: parseFloat(weight) || 0,
-                    body_fat_perc: parseFloat(bodyFat) || 0,
-                    chest: parseFloat(chest) || 0,
-                    waist: parseFloat(waist) || 0,
-                    hips: parseFloat(hips) || 0,
-                    bicep: parseFloat(bicep) || 0,
-                    thigh: parseFloat(thigh) || 0,
-                }),
+            await metricsApi.create({
+                date,
+                weight: parseFloat(weight) || 0,
+                body_fat_perc: parseFloat(bodyFat) || 0,
+                chest: parseFloat(chest) || 0,
+                waist: parseFloat(waist) || 0,
+                hips: parseFloat(hips) || 0,
+                bicep: parseFloat(bicep) || 0,
+                thigh: parseFloat(thigh) || 0,
             });
 
-            if (response.ok) {
-                fetchMetrics();
-                alert('Metrics logged!');
-                // Optional: clear form
-            } else {
-                alert('Failed to log metrics');
-            }
+            refreshMetrics();
+            alert('Metrics logged!');
+            // Reset form except date
+            setWeight('');
+            setBodyFat('');
+            setChest('');
+            setWaist('');
+            setHips('');
+            setBicep('');
+            setThigh('');
         } catch (error) {
             console.error('Error logging metrics:', error);
-            alert('Error logging metrics');
+            alert('Failed to log metrics');
         }
     };
 
-    // Format date for chart
     const formatXAxis = (tickItem: string) => {
         return new Date(tickItem).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
     };
 
     return (
         <div className="space-y-6">
-            <div className="glass-card p-6 sm:p-8">
+            <Card className="p-6 sm:p-8">
                 <div className="md:grid md:grid-cols-3 md:gap-8">
                     <div className="md:col-span-1">
-                        <h3 className="text-xl font-bold text-white mb-2">Body Metrics</h3>
+                        <h3 className="text-xl font-bold text-white mb-2 uppercase tracking-tight">Body Metrics</h3>
                         <p className="text-sm text-slate-400">
                             Track your weight, body fat %, and measurements over time.
                         </p>
@@ -102,109 +94,98 @@ const BodyMetrics: React.FC = () => {
                         <form onSubmit={handleSubmit}>
                             <div className="grid grid-cols-6 gap-6">
                                 <div className="col-span-6 sm:col-span-3">
-                                    <label htmlFor="date" className="block text-sm font-medium text-slate-400 mb-1">Date</label>
-                                    <input
+                                    <Input
+                                        label="Date"
                                         type="date"
                                         required
                                         value={date}
                                         onChange={(e) => setDate(e.target.value)}
-                                        className="bg-slate-900 border border-white/10 text-white focus:ring-primary focus:border-primary block w-full shadow-sm sm:text-sm rounded-lg p-2"
                                     />
                                 </div>
 
                                 <div className="col-span-6"><hr className="border-white/5 my-2" /></div>
 
                                 <div className="col-span-6 sm:col-span-3">
-                                    <label className="block text-sm font-medium text-slate-400 mb-1">Weight (kg)</label>
-                                    <input
+                                    <Input
+                                        label="Weight (kg)"
                                         type="number"
                                         step="0.1"
                                         value={weight}
                                         onChange={(e) => setWeight(e.target.value)}
-                                        className="bg-slate-900 border border-white/10 text-white focus:ring-primary focus:border-primary block w-full shadow-sm sm:text-sm rounded-lg p-2"
                                     />
                                 </div>
 
                                 <div className="col-span-6 sm:col-span-3">
-                                    <label className="block text-sm font-medium text-slate-400 mb-1">Body Fat %</label>
-                                    <input
+                                    <Input
+                                        label="Body Fat %"
                                         type="number"
                                         step="0.1"
                                         value={bodyFat}
                                         onChange={(e) => setBodyFat(e.target.value)}
-                                        className="bg-slate-900 border border-white/10 text-white focus:ring-primary focus:border-primary block w-full shadow-sm sm:text-sm rounded-lg p-2"
                                     />
                                 </div>
 
                                 <div className="col-span-6"><h4 className="text-sm font-bold text-white uppercase tracking-wider">Measurements (cm)</h4></div>
 
                                 <div className="col-span-6 sm:col-span-2">
-                                    <label className="block text-sm font-medium text-slate-400 mb-1">Chest</label>
-                                    <input
+                                    <Input
+                                        label="Chest"
                                         type="number"
                                         step="0.1"
                                         value={chest}
                                         onChange={(e) => setChest(e.target.value)}
-                                        className="bg-slate-900 border border-white/10 text-white focus:ring-primary focus:border-primary block w-full shadow-sm sm:text-sm rounded-lg p-2"
                                     />
                                 </div>
                                 <div className="col-span-6 sm:col-span-2">
-                                    <label className="block text-sm font-medium text-slate-400 mb-1">Waist</label>
-                                    <input
+                                    <Input
+                                        label="Waist"
                                         type="number"
                                         step="0.1"
                                         value={waist}
                                         onChange={(e) => setWaist(e.target.value)}
-                                        className="bg-slate-900 border border-white/10 text-white focus:ring-primary focus:border-primary block w-full shadow-sm sm:text-sm rounded-lg p-2"
                                     />
                                 </div>
                                 <div className="col-span-6 sm:col-span-2">
-                                    <label className="block text-sm font-medium text-slate-400 mb-1">Hips</label>
-                                    <input
+                                    <Input
+                                        label="Hips"
                                         type="number"
                                         step="0.1"
                                         value={hips}
                                         onChange={(e) => setHips(e.target.value)}
-                                        className="bg-slate-900 border border-white/10 text-white focus:ring-primary focus:border-primary block w-full shadow-sm sm:text-sm rounded-lg p-2"
                                     />
                                 </div>
                                 <div className="col-span-6 sm:col-span-2">
-                                    <label className="block text-sm font-medium text-slate-400 mb-1">Bicep</label>
-                                    <input
+                                    <Input
+                                        label="Bicep"
                                         type="number"
                                         step="0.1"
                                         value={bicep}
                                         onChange={(e) => setBicep(e.target.value)}
-                                        className="bg-slate-900 border border-white/10 text-white focus:ring-primary focus:border-primary block w-full shadow-sm sm:text-sm rounded-lg p-2"
                                     />
                                 </div>
                                 <div className="col-span-6 sm:col-span-2">
-                                    <label className="block text-sm font-medium text-slate-400 mb-1">Thigh</label>
-                                    <input
+                                    <Input
+                                        label="Thigh"
                                         type="number"
                                         step="0.1"
                                         value={thigh}
                                         onChange={(e) => setThigh(e.target.value)}
-                                        className="bg-slate-900 border border-white/10 text-white focus:ring-primary focus:border-primary block w-full shadow-sm sm:text-sm rounded-lg p-2"
                                     />
                                 </div>
                             </div>
 
                             <div className="mt-6 flex justify-end">
-                                <button
-                                    type="submit"
-                                    className="inline-flex justify-center py-2 px-6 border border-transparent shadow-glow text-sm font-bold rounded-lg text-white bg-primary hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all"
-                                >
+                                <Button type="submit" className="px-6">
                                     Log Metrics
-                                </button>
+                                </Button>
                             </div>
                         </form>
                     </div>
                 </div>
-            </div>
+            </Card>
 
-            <div className="glass-card p-6 sm:p-8">
-                <h3 className="text-xl font-bold text-white mb-6">Weight History</h3>
+            <Card className="p-6 sm:p-8">
+                <h3 className="text-xl font-bold text-white mb-6 uppercase tracking-tight">Weight History</h3>
                 <div className="h-72">
                     <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={metrics}>
@@ -238,9 +219,7 @@ const BodyMetrics: React.FC = () => {
                         </LineChart>
                     </ResponsiveContainer>
                 </div>
-            </div>
-
-            {/* Could add another chart for measurements if needed */}
+            </Card>
         </div>
     );
 };

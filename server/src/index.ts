@@ -11,8 +11,10 @@ app.use(cors());
 app.use(express.json());
 
 import apiRoutes from './routes/api.js';
+import { errorHandler } from './middleware/errorHandler.js';
 
 app.use('/api', apiRoutes);
+app.use(errorHandler);
 
 app.get('/', (req, res) => {
     res.send('Dashboard API is running');

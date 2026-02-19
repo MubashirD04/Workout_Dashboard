@@ -1,5 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import CardioProgressChart from './CardioProgressChart';
+import React, { useState } from 'react';
+import CardioProgressChart from '../components/CardioProgressChart';
+import { cardioApi } from '../api/trackingApi';
+import { useFetch } from '../hooks/useFetch';
+import { formatDate, getCurrentDate, getCurrentTime } from '../utils/dateUtils';
+import { calculatePace } from '../utils/calculationUtils';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Card } from '../components/ui/Card';
 
 interface CardioLog {
     id: number;
@@ -12,12 +19,12 @@ interface CardioLog {
 }
 
 const CardioTracker: React.FC = () => {
-    const [logs, setLogs] = useState<CardioLog[]>([]);
-    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-    const [time, setTime] = useState(() => {
-        const now = new Date();
-        return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    });
+    const { data, loading, error, refresh: refreshLogs } = useFetch(cardioApi.getAll);
+    const logs = data || [];
+    console.log('CardioTracker Rendering', { logsCount: logs.length, loading, error });
+
+    const [date, setDate] = useState(getCurrentDate());
+    const [time, setTime] = useState(getCurrentTime());
     const [type, setType] = useState('Run');
     const [distance, setDistance] = useState<number | string>('');
     const [duration, setDuration] = useState<number | string>('');
@@ -34,22 +41,6 @@ const CardioTracker: React.FC = () => {
         "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00"
     ];
 
-    useEffect(() => {
-        fetchLogs();
-    }, []);
-
-    const fetchLogs = async () => {
-        try {
-            const response = await fetch('http://localhost:5000/api/cardio');
-            if (response.ok) {
-                const data = await response.json();
-                setLogs(data);
-            }
-        } catch (error) {
-            console.error('Error fetching cardio logs:', error);
-        }
-    };
-
     const handleSave = async () => {
         if (!date || !type || !distance || !duration) {
             alert("Please fill in all required fields.");
@@ -57,33 +48,27 @@ const CardioTracker: React.FC = () => {
         }
 
         try {
-            const method = editingLogId ? 'PUT' : 'POST';
-            const url = editingLogId
-                ? `http://localhost:5000/api/cardio/${editingLogId}`
-                : 'http://localhost:5000/api/cardio';
+            const logData = {
+                date,
+                type,
+                distance: parseFloat(String(distance)),
+                duration: parseInt(String(duration)),
+                notes,
+                time: time || null,
+            };
 
-            const response = await fetch(url, {
-                method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    date,
-                    type,
-                    distance: parseFloat(String(distance)),
-                    duration: parseInt(String(duration)),
-                    notes,
-                    time: time || null,
-                }),
-            });
-
-            if (response.ok) {
-                fetchLogs();
-                resetForm();
-                alert(editingLogId ? 'Session updated!' : 'Session logged!');
+            if (editingLogId) {
+                await cardioApi.update(editingLogId, logData);
             } else {
-                alert('Failed to save session');
+                await cardioApi.create(logData);
             }
+
+            refreshLogs();
+            resetForm();
+            alert(editingLogId ? 'Session updated!' : 'Session logged!');
         } catch (error) {
             console.error('Error saving cardio:', error);
+            alert('Failed to save session');
         }
     };
 
@@ -94,16 +79,14 @@ const CardioTracker: React.FC = () => {
         setDuration('');
         setNotes('');
         setIsExpanded(false);
-        setDate(new Date().toISOString().split('T')[0]);
-        const now = new Date();
-        setTime(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
+        setDate(getCurrentDate());
+        setTime(getCurrentTime());
     };
 
-    const loadLogForEdit = async (log: CardioLog) => {
+    const loadLogForEdit = (log: CardioLog) => {
         setEditingLogId(log.id);
         setIsExpanded(true);
 
-        // Handle date formatting
         const formattedDate = log.date.split('T')[0];
         setDate(formattedDate);
         setTime(log.time ? log.time.slice(0, 5) : '');
@@ -119,37 +102,19 @@ const CardioTracker: React.FC = () => {
         e.stopPropagation();
         if (!window.confirm('Are you sure you want to delete this log?')) return;
         try {
-            const response = await fetch(`http://localhost:5000/api/cardio/${id}`, {
-                method: 'DELETE',
-            });
-            if (response.ok) {
-                setLogs(logs.filter((log) => log.id !== id));
-                if (editingLogId === id) resetForm();
-            }
+            await cardioApi.delete(id);
+            refreshLogs();
+            if (editingLogId === id) resetForm();
         } catch (error) {
             console.error('Error deleting log:', error);
+            alert('Failed to delete log');
         }
-    };
-
-    const formatDate = (dateString: string) => {
-        const parts = dateString.split('T')[0].split('-');
-        if (parts.length !== 3) return dateString;
-        const year = parseInt(parts[0]);
-        const month = parseInt(parts[1]) - 1;
-        const day = parseInt(parts[2]);
-        const d = new Date(year, month, day);
-        return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
-    };
-
-    const calculatePace = (dist: number, dur: number) => {
-        if (!dist || !dur) return "0.00";
-        return (dur / dist).toFixed(2);
     };
 
     return (
         <div className="space-y-6">
             {/* The Tracker Logger */}
-            <div className="glass-card p-6 sm:p-8">
+            <Card className="p-6 sm:p-8">
                 <div
                     className="flex justify-between items-center cursor-pointer relative z-30"
                     onClick={() => setIsExpanded(!isExpanded)}
@@ -169,16 +134,14 @@ const CardioTracker: React.FC = () => {
                     </div>
 
                     <div className={`flex items-center gap-6 transition-all duration-500 ease-in-out ${isExpanded ? 'opacity-100 translate-x-0 pointer-events-auto' : 'opacity-0 translate-x-4 pointer-events-none'}`}>
-                        <div className="flex flex-col items-center">
-                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 w-full text-center">Date</label>
-                            <input
-                                type="date"
-                                value={date}
-                                onClick={(e) => e.stopPropagation()}
-                                onChange={(e) => setDate(e.target.value)}
-                                className="bg-slate-900 border border-white/10 text-white rounded-lg px-3 py-1.5 text-xs focus:ring-primary focus:border-primary outline-none hover:border-primary/50 transition-colors text-center"
-                            />
-                        </div>
+                        <Input
+                            label="Date"
+                            type="date"
+                            value={date}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) => setDate(e.target.value)}
+                            className="text-xs py-1.5 w-32 text-center"
+                        />
                         <div className="flex flex-col items-center relative z-50">
                             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 w-full text-center">Time</label>
                             <div className="relative">
@@ -234,29 +197,25 @@ const CardioTracker: React.FC = () => {
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="flex flex-col">
-                                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 text-center">Distance (km)</label>
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        value={distance}
-                                        onChange={(e) => setDistance(e.target.value)}
-                                        onFocus={(e) => e.target.select()}
-                                        className="bg-slate-900 border border-white/10 text-white text-2xl font-bold rounded-xl px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                        placeholder="0.00"
-                                    />
-                                </div>
-                                <div className="flex flex-col">
-                                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 text-center">Duration (min)</label>
-                                    <input
-                                        type="number"
-                                        value={duration}
-                                        onChange={(e) => setDuration(e.target.value)}
-                                        onFocus={(e) => e.target.select()}
-                                        className="bg-slate-900 border border-white/10 text-white text-2xl font-bold rounded-xl px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                        placeholder="0"
-                                    />
-                                </div>
+                                <Input
+                                    label="Distance (km)"
+                                    type="number"
+                                    step="0.01"
+                                    value={distance}
+                                    onChange={(e) => setDistance(e.target.value)}
+                                    onFocus={(e) => e.target.select()}
+                                    className="text-2xl font-bold rounded-xl px-4 py-3 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    placeholder="0.00"
+                                />
+                                <Input
+                                    label="Duration (min)"
+                                    type="number"
+                                    value={duration}
+                                    onChange={(e) => setDuration(e.target.value)}
+                                    onFocus={(e) => e.target.select()}
+                                    className="text-2xl font-bold rounded-xl px-4 py-3 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    placeholder="0"
+                                />
                             </div>
                         </div>
 
@@ -269,31 +228,32 @@ const CardioTracker: React.FC = () => {
                             />
                             <div className="flex gap-4">
                                 {editingLogId && (
-                                    <button
+                                    <Button
                                         onClick={resetForm}
-                                        className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold py-4 rounded-lg transition-all"
+                                        variant="secondary"
+                                        className="flex-1 py-4"
                                     >
                                         Cancel
-                                    </button>
+                                    </Button>
                                 )}
-                                <button
+                                <Button
                                     onClick={handleSave}
                                     disabled={!distance || Number(distance) <= 0 || !duration || Number(duration) <= 0}
-                                    className={`flex-[2] ${editingLogId ? 'bg-orange-600 hover:bg-orange-500 shadow-orange-600/20' : 'bg-primary hover:bg-primary-hover'} text-white font-bold py-4 rounded-lg shadow-glow hover:shadow-glow-lg transition-all transform active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none disabled:transform-none`}
+                                    className={`flex-[2] py-4 ${editingLogId ? 'bg-orange-600 hover:bg-orange-500 shadow-orange-600/20' : ''}`}
                                 >
                                     {editingLogId ? 'Update Session' : 'Save Session'}
-                                </button>
+                                </Button>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            </Card>
 
             {/* Cardio Trends Chart */}
-            {logs.length > 0 && <CardioProgressChart logs={logs} />}
+            {logs.length > 0 && <CardioProgressChart logs={logs as any} />}
 
             {/* History Table */}
-            <div className="glass-card overflow-hidden">
+            <Card className="overflow-hidden">
                 <div className="p-6 sm:px-8 border-b border-white/5 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
@@ -314,7 +274,7 @@ const CardioTracker: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
-                            {logs.map((log) => (
+                            {(logs as any[]).map((log: any) => (
                                 <tr
                                     key={log.id}
                                     onClick={() => loadLogForEdit(log)}
@@ -361,7 +321,7 @@ const CardioTracker: React.FC = () => {
                         </tbody>
                     </table>
                 </div>
-            </div>
+            </Card>
         </div>
     );
 };

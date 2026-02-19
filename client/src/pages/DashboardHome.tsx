@@ -3,6 +3,7 @@ import AthleteRadarChart from '../components/AthleteRadarChart';
 import VolumeLineChart from '../components/VolumeLineChart';
 import MacroDonutChart from '../components/MacroDonutChart';
 import ConsistencyHeatmap from '../components/ConsistencyHeatmap';
+import { Card } from '../components/ui/Card';
 
 const DashboardHome: React.FC = () => {
     return (
@@ -13,14 +14,14 @@ const DashboardHome: React.FC = () => {
                     <p className="text-slate-400 mt-1">Here's your performance overview for today.</p>
                 </div>
                 <div className="flex gap-3">
-                    <div className="glass-card px-4 py-2 flex flex-col">
+                    <Card className="px-4 py-2 flex flex-col">
                         <span className="text-xs text-slate-400 uppercase tracking-wider">Streak</span>
                         <span className="text-xl font-bold text-primary text-glow">12 Days</span>
-                    </div>
-                    <div className="glass-card px-4 py-2 flex flex-col">
+                    </Card>
+                    <Card className="px-4 py-2 flex flex-col">
                         <span className="text-xs text-slate-400 uppercase tracking-wider">Volume</span>
                         <span className="text-xl font-bold text-white">42,500 kg</span>
-                    </div>
+                    </Card>
                 </div>
             </div>
 
@@ -52,7 +53,7 @@ const DashboardHome: React.FC = () => {
                     { label: 'Sleep Quality', value: '88%', change: '+5.0%' },
                     { label: 'Body Fat', value: '12.4%', change: '-0.4%' },
                 ].map((stat, i) => (
-                    <div key={i} className="glass-card p-4 hover:bg-white/5 transition-colors">
+                    <Card key={i} className="p-4 hover:bg-white/5 transition-colors">
                         <p className="text-xs text-slate-400 mb-1">{stat.label}</p>
                         <div className="flex items-baseline gap-2">
                             <span className="text-xl font-bold text-white">{stat.value}</span>
@@ -60,7 +61,7 @@ const DashboardHome: React.FC = () => {
                                 {stat.change}
                             </span>
                         </div>
-                    </div>
+                    </Card>
                 ))}
             </div>
         </div>

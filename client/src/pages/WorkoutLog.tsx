@@ -1,5 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import WorkoutMaxWeightChart from './WorkoutMaxWeightChart';
+import React, { useState } from 'react';
+import WorkoutMaxWeightChart from '../components/WorkoutMaxWeightChart';
+import { workoutApi } from '../api/workoutApi';
+import { useFetch } from '../hooks/useFetch';
+import { formatDate, getCurrentDate, getCurrentTime } from '../utils/dateUtils';
+import { calculateWorkoutVolume } from '../utils/calculationUtils';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Card } from '../components/ui/Card';
 
 interface Exercise {
     exercise_name: string;
@@ -18,12 +25,12 @@ interface Workout {
 }
 
 const WorkoutLog: React.FC = () => {
-    const [workouts, setWorkouts] = useState<Workout[]>([]);
-    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-    const [time, setTime] = useState(() => {
-        const now = new Date();
-        return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    });
+    const { data, loading, error, refresh: refreshWorkouts } = useFetch(workoutApi.getAll);
+    const workouts = data || [];
+    console.log('WorkoutLog Rendering', { workoutsCount: workouts.length, loading, error });
+
+    const [date, setDate] = useState(getCurrentDate());
+    const [time, setTime] = useState(getCurrentTime());
     const [duration, setDuration] = useState<number>(60);
     const [notes, setNotes] = useState('');
     const [currentExercises, setCurrentExercises] = useState<Exercise[]>([]);
@@ -51,22 +58,6 @@ const WorkoutLog: React.FC = () => {
         "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00"
     ];
 
-    useEffect(() => {
-        fetchWorkouts();
-    }, []);
-
-    const fetchWorkouts = async () => {
-        try {
-            const response = await fetch('http://localhost:5000/api/workouts');
-            if (response.ok) {
-                const data = await response.json();
-                setWorkouts(data);
-            }
-        } catch (error) {
-            console.error('Error fetching workouts:', error);
-        }
-    };
-
     const addExercise = () => {
         if (!exerciseName || sets <= 0 || reps <= 0 || weight === 0) {
             return;
@@ -79,44 +70,33 @@ const WorkoutLog: React.FC = () => {
 
         // Reset inputs
         setExerciseName('');
-        setSets(0); // Set to 0 so they are "empty" by the new logic
+        setSets(0);
         setReps(0);
         setWeight(0);
     };
 
     const saveWorkout = async () => {
         try {
-            const method = editingWorkoutId ? 'PUT' : 'POST';
-            const url = editingWorkoutId
-                ? `http://localhost:5000/api/workouts/${editingWorkoutId}`
-                : 'http://localhost:5000/api/workouts';
+            const workoutData = {
+                date,
+                notes,
+                exercises: currentExercises,
+                time: time || null,
+                duration: duration || null,
+            };
 
-            const response = await fetch(url, {
-                method,
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    date,
-                    notes,
-                    exercises: currentExercises,
-                    time: time || null,
-                    duration: duration || null,
-                }),
-            });
-
-            if (response.ok) {
-                fetchWorkouts();
-                resetForm();
-                alert(editingWorkoutId ? 'Workout updated!' : 'Workout saved!');
-            } else if (response.status === 409) {
-                const errorData = await response.json();
-                alert(errorData.error);
+            if (editingWorkoutId) {
+                await workoutApi.update(editingWorkoutId, workoutData);
             } else {
-                alert(`Failed to ${editingWorkoutId ? 'update' : 'save'} workout`);
+                await workoutApi.create(workoutData);
             }
-        } catch (error) {
+
+            refreshWorkouts();
+            resetForm();
+            alert(editingWorkoutId ? 'Workout updated!' : 'Workout saved!');
+        } catch (error: any) {
             console.error('Error saving/updating workout:', error);
+            alert(error.error || `Failed to ${editingWorkoutId ? 'update' : 'save'} workout`);
         }
     };
 
@@ -124,71 +104,45 @@ const WorkoutLog: React.FC = () => {
         setNotes('');
         setCurrentExercises([]);
         setEditingWorkoutId(null);
-        setDate(new Date().toISOString().split('T')[0]);
-        const now = new Date();
-        setTime(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
+        setDate(getCurrentDate());
+        setTime(getCurrentTime());
         setDuration(60);
         setIsExpanded(false);
     };
 
     const loadWorkoutForEdit = async (workoutId: number) => {
         try {
-            const response = await fetch(`http://localhost:5000/api/workouts/${workoutId}`);
-            if (response.ok) {
-                const data = await response.json();
-                setEditingWorkoutId(data.id);
-                setIsExpanded(true);
+            const data = await workoutApi.getById(workoutId);
+            setEditingWorkoutId(data.id);
+            setIsExpanded(true);
 
-                // Fix date shifting: Parse the YYYY-MM-DD string directly from the TSL/ISO string
-                // data.date is likely "2023-10-08T00:00:00.000Z"
-                const formattedDate = data.date.split('T')[0];
+            const formattedDate = data.date.split('T')[0];
 
-                setDate(formattedDate);
-                setTime(data.time || '');
-                setDuration(data.duration || 0);
-                setNotes(data.notes || '');
-                setCurrentExercises(data.exercises || []);
-                // Scroll to top to see the form
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            }
+            setDate(formattedDate);
+            setTime(data.time || '');
+            setDuration(data.duration || 0);
+            setNotes(data.notes || '');
+            setCurrentExercises(data.exercises || []);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         } catch (error) {
             console.error('Error loading workout details:', error);
         }
     };
 
     const handleDeleteWorkout = async (e: React.MouseEvent, workoutId: number) => {
-        e.stopPropagation(); // Prevent loading the workout for edit
-
+        e.stopPropagation();
         if (!window.confirm('Are you sure you want to delete this workout?')) return;
 
         try {
-            const response = await fetch(`http://localhost:5000/api/workouts/${workoutId}`, {
-                method: 'DELETE',
-            });
-            if (response.ok) {
-                fetchWorkouts();
-                if (editingWorkoutId === workoutId) {
-                    resetForm();
-                }
-            } else {
-                alert('Failed to delete workout');
+            await workoutApi.delete(workoutId);
+            refreshWorkouts();
+            if (editingWorkoutId === workoutId) {
+                resetForm();
             }
         } catch (error) {
             console.error('Error deleting workout:', error);
+            alert('Failed to delete workout');
         }
-    };
-
-    const formatDate = (dateString: string) => {
-        // Parse date string like "2023-10-08" or "2023-10-08T..."
-        const parts = dateString.split('T')[0].split('-');
-        if (parts.length !== 3) return dateString;
-
-        const year = parseInt(parts[0]);
-        const month = parseInt(parts[1]) - 1; // 0-indexed
-        const day = parseInt(parts[2]);
-
-        const d = new Date(year, month, day);
-        return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
     };
 
     const handleIncrement = (setter: React.Dispatch<React.SetStateAction<number>>, step: number = 1) => {
@@ -199,16 +153,11 @@ const WorkoutLog: React.FC = () => {
         setter(prev => Math.max(0, prev - step));
     };
 
-    const calculateVolume = (exercises: Exercise[] = []) => {
-        if (!exercises) return 0;
-        return exercises.reduce((acc, ex) => acc + (ex.sets * ex.reps * ex.weight), 0);
-    };
-
     return (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             {/* Left Column: The Logger (8 cols) */}
             <div className="lg:col-span-8 space-y-6">
-                <div className="glass-card p-6 sm:p-8">
+                <Card className="p-6 sm:p-8">
                     <div
                         className="flex justify-between items-center cursor-pointer relative z-30"
                         onClick={() => setIsExpanded(!isExpanded)}
@@ -227,16 +176,14 @@ const WorkoutLog: React.FC = () => {
                             </div>
                         </div>
                         <div className={`flex items-center gap-6 transition-all duration-500 ease-in-out ${isExpanded ? 'opacity-100 translate-x-0 pointer-events-auto' : 'opacity-0 translate-x-4 pointer-events-none'}`}>
-                            <div className="flex flex-col items-center">
-                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 w-full text-center">Workout Date</label>
-                                <input
-                                    type="date"
-                                    value={date}
-                                    onClick={(e) => e.stopPropagation()}
-                                    onChange={(e) => setDate(e.target.value)}
-                                    className="bg-slate-900 border border-white/10 text-white rounded-lg px-3 py-1.5 text-xs focus:ring-primary focus:border-primary outline-none hover:border-primary/50 transition-colors text-center"
-                                />
-                            </div>
+                            <Input
+                                label="Workout Date"
+                                type="date"
+                                value={date}
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={(e) => setDate(e.target.value)}
+                                className="text-xs py-1.5 w-32 text-center"
+                            />
                             <div className="flex flex-col items-center relative z-50">
                                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 w-full text-center">Optional Time</label>
                                 <div className="relative">
@@ -268,18 +215,16 @@ const WorkoutLog: React.FC = () => {
                                     )}
                                 </div>
                             </div>
-                            <div className="flex flex-col items-center">
-                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 w-full text-center">Duration (min)</label>
-                                <input
-                                    type="number"
-                                    value={duration}
-                                    onClick={(e) => e.stopPropagation()}
-                                    onChange={(e) => setDuration(Number(e.target.value))}
-                                    onFocus={(e) => e.target.select()}
-                                    className="bg-slate-900 border border-white/10 text-white rounded-lg px-3 py-1.5 text-xs focus:ring-primary focus:border-primary outline-none hover:border-primary/50 transition-colors w-20 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                    min="0"
-                                />
-                            </div>
+                            <Input
+                                label="Duration (min)"
+                                type="number"
+                                value={duration}
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={(e) => setDuration(Number(e.target.value))}
+                                onFocus={(e) => e.target.select()}
+                                className="text-xs py-1.5 w-20 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                min="0"
+                            />
                         </div>
                     </div>
 
@@ -289,8 +234,8 @@ const WorkoutLog: React.FC = () => {
                         <div className="min-h-0">
                             {/* Exercise Name Input */}
                             <div className="relative mb-8">
-                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Exercise Name</label>
-                                <input
+                                <Input
+                                    label="Exercise Name"
                                     type="text"
                                     value={exerciseName}
                                     onChange={(e) => {
@@ -300,7 +245,7 @@ const WorkoutLog: React.FC = () => {
                                     onFocus={() => setIsDropdownOpen(true)}
                                     onBlur={() => setTimeout(() => setIsDropdownOpen(false), 200)}
                                     placeholder="Search or type exercise..."
-                                    className="w-full bg-slate-900 border border-white/10 text-white text-lg rounded-lg px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all placeholder:text-slate-600"
+                                    className="text-lg px-4 py-3 placeholder:text-slate-600"
                                 />
                                 {isDropdownOpen && exerciseName && (
                                     <div className="absolute z-10 w-full mt-1 bg-slate-800 border border-white/10 rounded-lg shadow-xl max-h-48 overflow-y-auto">
@@ -353,14 +298,15 @@ const WorkoutLog: React.FC = () => {
                             </div>
 
                             {/* Add Exercise Button */}
-                            <button
+                            <Button
                                 onClick={addExercise}
+                                variant="ghost"
                                 disabled={!exerciseName || sets <= 0 || reps <= 0 || weight === 0}
-                                className="w-full py-3 rounded-lg border-2 border-primary/50 text-primary font-bold hover:bg-primary/10 hover:border-primary transition-all focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wide text-sm flex items-center justify-center gap-2 mb-8"
+                                className="w-full py-3 uppercase tracking-wide text-sm flex items-center justify-center gap-2 mb-8"
                             >
                                 <span>Add Exercise</span>
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                            </button>
+                            </Button>
 
                             {/* Current Session Review */}
                             {currentExercises.length > 0 && (
@@ -403,40 +349,41 @@ const WorkoutLog: React.FC = () => {
                                 />
                                 <div className="flex gap-4">
                                     {editingWorkoutId && (
-                                        <button
+                                        <Button
                                             onClick={resetForm}
-                                            className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold py-4 rounded-lg transition-all"
+                                            variant="secondary"
+                                            className="flex-1 py-4"
                                         >
                                             Cancel
-                                        </button>
+                                        </Button>
                                     )}
-                                    <button
+                                    <Button
                                         onClick={saveWorkout}
                                         disabled={currentExercises.length === 0}
-                                        className={`flex-[2] ${editingWorkoutId ? 'bg-orange-600 hover:bg-orange-500 shadow-orange-600/20' : 'bg-primary hover:bg-primary-hover'} text-white font-bold py-4 rounded-lg shadow-glow hover:shadow-glow-lg transition-all transform active:scale-[0.99] disabled:opacity-50 disabled:shadow-none`}
+                                        className={`flex-[2] py-4 ${editingWorkoutId ? 'bg-orange-600 hover:bg-orange-500 shadow-orange-600/20' : ''}`}
                                     >
                                         {editingWorkoutId ? 'Update Workout' : 'Save Workout'}
-                                    </button>
+                                    </Button>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                </Card>
 
-                {workouts.length > 0 && <WorkoutMaxWeightChart workouts={workouts} />}
+                {workouts.length > 0 && <WorkoutMaxWeightChart workouts={workouts as any} />}
             </div>
 
             {/* Right Column: Recent History (4 cols) */}
             <div className="lg:col-span-4">
-                <div className="glass-card p-6 sm:p-8 h-full flex flex-col">
+                <Card className="p-6 sm:p-8 h-full flex flex-col">
                     <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
                         <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                         Recent History
                     </h3>
 
                     <div className="space-y-4 overflow-y-auto max-h-[800px] pr-2 custom-scrollbar">
-                        {workouts.map((workout) => {
-                            const volume = calculateVolume(workout.exercises);
+                        {(workouts as Workout[]).map((workout) => {
+                            const volume = calculateWorkoutVolume(workout.exercises);
 
                             return (
                                 <div
@@ -501,7 +448,7 @@ const WorkoutLog: React.FC = () => {
                             </div>
                         )}
                     </div>
-                </div>
+                </Card>
             </div>
         </div>
     );
