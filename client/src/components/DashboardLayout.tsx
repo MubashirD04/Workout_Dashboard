@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import FloatingChat from './FloatingChat';
 
 interface DashboardLayoutProps {
     children: React.ReactNode;
@@ -67,6 +68,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
             <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 {children}
             </main>
+
+            <FloatingChat />
         </div>
     );
 };

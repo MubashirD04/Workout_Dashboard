@@ -8,6 +8,8 @@ The frontend application for the Fitness Dashboard, built with React and Vite.
 - **TypeScript**: Typed development experience.
 - **Vite**: Build tool and dev server.
 - **Tailwind CSS**: Utility-first styling.
+- **Lucide React**: Icon library.
+- **Framer Motion**: Animation library.
 - **Recharts**: Data visualization.
 - **React Router**: Client-side routing.
 
@@ -34,11 +36,13 @@ npm install
 - **📏 Body Metrics**: Historical tracking of weight and body measurements.
 - **🍎 Nutrition Tracker**: Daily log for calories and macros with visual donut chart.
 - **📸 Progress Photos**: Visual diary of physical transformation.
+- **🤖 AI Fitness Coach**: Floating chat interface (RAG-powered) for personalized advice.
 - **📈 Data Visualizations**:
     - **VolumeLineChart**: Strength progress over time.
     - **ConsistencyHeatmap**: Active days visualization.
     - **AthleteRadarChart**: Multi-dimensional performance metrics.
     - **MacroDonutChart**: Visual macro breakdown.
+    - **WorkoutMaxWeightChart**: Track 1RM progress for individual exercises.
 
 ## Configuration
 

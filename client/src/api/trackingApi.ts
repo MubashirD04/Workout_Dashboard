@@ -16,6 +16,7 @@ export const metricsApi = {
 export const nutritionApi = {
     getAll: () => apiClient.get('/nutrition'),
     create: (data: any) => apiClient.post('/nutrition', data),
+    delete: (id: number | string) => apiClient.delete(`/nutrition/${id}`),
 };
 
 export const photosApi = {

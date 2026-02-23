@@ -94,6 +94,15 @@ export const getNutritionLogs = async (req: Request, res: Response, next: NextFu
     }
 };
 
+export const deleteNutritionLog = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        await trackingService.deleteNutrition(req.params.id as string);
+        sendSuccess(res, { message: 'Nutrition log deleted successfully' });
+    } catch (error) {
+        next(error);
+    }
+};
+
 // Photos
 export const createPhotoLog = async (req: Request, res: Response, next: NextFunction) => {
     try {

@@ -1,8 +1,8 @@
 import pool from './index.js';
 
 const createTables = async () => {
-    try {
-        await pool.query(`
+  try {
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS workouts (
         id SERIAL PRIMARY KEY,
         date DATE DEFAULT CURRENT_DATE,
@@ -31,6 +31,7 @@ const createTables = async () => {
         id SERIAL PRIMARY KEY,
         date DATE DEFAULT CURRENT_DATE,
         weight DECIMAL(5, 2),
+        height DECIMAL(5, 2),
         body_fat_perc DECIMAL(4, 2),
         chest DECIMAL(5, 2),
         waist DECIMAL(5, 2),
@@ -55,12 +56,12 @@ const createTables = async () => {
         notes TEXT
       );
     `);
-        console.log('Tables created successfully');
-        process.exit(0);
-    } catch (err) {
-        console.error('Error creating tables', err);
-        process.exit(1);
-    }
+    console.log('Tables created successfully');
+    process.exit(0);
+  } catch (err) {
+    console.error('Error creating tables', err);
+    process.exit(1);
+  }
 };
 
 createTables();
