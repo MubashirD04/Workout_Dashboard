@@ -1,9 +1,9 @@
-import { apiClient } from './apiClient';
+import { convexClient, mapIds } from './apiClient';
 
 export const workoutApi = {
-    getAll: () => apiClient.get('/workouts'),
-    getById: (id: number | string) => apiClient.get(`/workouts/${id}`),
-    create: (data: any) => apiClient.post('/workouts', data),
-    update: (id: number | string, data: any) => apiClient.put(`/workouts/${id}`, data),
-    delete: (id: number | string) => apiClient.delete(`/workouts/${id}`),
+    getAll: () => convexClient.query("workouts:getWorkouts" as any, {}).then(mapIds),
+    getById: (id: string | number) => convexClient.query("workouts:getWorkout" as any, { id }).then(mapIds),
+    create: (data: any) => convexClient.mutation("workouts:createWorkout" as any, data).then(mapIds),
+    update: (id: string | number, data: any) => convexClient.mutation("workouts:updateWorkout" as any, { id, ...data }),
+    delete: (id: string | number) => convexClient.mutation("workouts:deleteWorkout" as any, { id }),
 };

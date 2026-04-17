@@ -1,43 +1,30 @@
-console.log('API Client Initialized');
-const API_BASE_URL = 'http://localhost:5000/api';
+console.log('Convex API Client Initialized');
+import { ConvexHttpClient } from "convex/browser";
 
-export const apiClient = {
-    async request(endpoint: string, options: RequestInit = {}) {
-        const url = `${API_BASE_URL}${endpoint}`;
-        const headers = {
-            'Content-Type': 'application/json',
-            ...options.headers,
-        };
+const convexUrl = import.meta.env.VITE_CONVEX_URL || "http://localhost:3210";
+export const convexClient = new ConvexHttpClient(convexUrl);
 
-        const response = await fetch(url, { ...options, headers });
-        const data = await response.json();
-
-        if (!response.ok) {
-            throw { status: response.status, ...data };
+export const mapIds = (data: any): any => {
+    if (Array.isArray(data)) {
+        return data.map(item => mapIds(item));
+    }
+    if (data && typeof data === 'object') {
+        const mapped = { ...data };
+        if (mapped._id) {
+            mapped.id = mapped._id;
         }
+        return mapped;
+    }
+    return data;
+};
 
-        return data;
+// Deprecate fetch based apiClient, used for temporary fallback if any components depend directly on it
+export const apiClient = {
+    async request(endpoint: string) {
+        throw new Error(`API client is deprecated and replaced by Convex: ${endpoint}`);
     },
-
-    get(endpoint: string) {
-        return this.request(endpoint, { method: 'GET' });
-    },
-
-    post(endpoint: string, body: any) {
-        return this.request(endpoint, {
-            method: 'POST',
-            body: JSON.stringify(body),
-        });
-    },
-
-    put(endpoint: string, body: any) {
-        return this.request(endpoint, {
-            method: 'PUT',
-            body: JSON.stringify(body),
-        });
-    },
-
-    delete(endpoint: string) {
-        return this.request(endpoint, { method: 'DELETE' });
-    },
+    get(endpoint: string) { return this.request(endpoint); },
+    post(endpoint: string) { return this.request(endpoint); },
+    put(endpoint: string) { return this.request(endpoint); },
+    delete(endpoint: string) { return this.request(endpoint); },
 };

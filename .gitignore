@@ -7,8 +7,9 @@
 
 # Environment variables
 .env
-**/.env
-**/.env.local
+.env.local
+.env.*.local
+.convex/
 
 # Logs
 **/logs/
