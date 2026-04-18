@@ -1,5 +1,6 @@
 # Dependencies
 **/node_modules/
+book_knowledge.csv
 
 # Build outputs
 **/dist/
@@ -22,7 +23,11 @@ yarn-error.log*
 .DS_Store
 Thumbs.db
 
-# Editor folders
+# Editor and Agent folders
 .vscode/
 .idea/
+.claude/
+.agents/
 *.sw?
+skills-lock.json
+

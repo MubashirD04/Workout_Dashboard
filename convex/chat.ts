@@ -2,6 +2,14 @@ import { query, mutation, action, internalQuery, internalMutation } from "./_gen
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
 
+export const getLatestChunkIndex = query({
+  args: {},
+  handler: async (ctx) => {
+    const latest = await ctx.db.query("bookKnowledge").order("desc").first();
+    return latest ? { book_title: latest.book_title, chunk_index: latest.chunk_index } : null;
+  },
+});
+
 export const getConversations = query({
   args: {},
   handler: async (ctx) => {
@@ -25,10 +33,11 @@ export const getConversations = query({
 export const clearChunks = mutation({
   args: {},
   handler: async (ctx) => {
-    const chunks = await ctx.db.query("bookKnowledge").collect();
+    const chunks = await ctx.db.query("bookKnowledge").take(100);
     for (const c of chunks) {
       await ctx.db.delete(c._id);
     }
+    return chunks.length;
   },
 });
 
@@ -41,6 +50,22 @@ export const addChunk = mutation({
   },
   handler: async (ctx, args) => {
     await ctx.db.insert("bookKnowledge", args);
+  },
+});
+
+export const addChunks = mutation({
+  args: {
+    chunks: v.array(v.object({
+      book_title: v.string(),
+      chunk_index: v.number(),
+      content: v.string(),
+      embedding: v.array(v.float64()),
+    }))
+  },
+  handler: async (ctx, args) => {
+    for (const chunk of args.chunks) {
+      await ctx.db.insert("bookKnowledge", chunk);
+    }
   },
 });
 
@@ -175,29 +200,20 @@ export const askQuestion = action({
     conversationId: v.optional(v.id("conversations")),
   },
   handler: async (ctx, args) => {
-    // Generate embedding using Google Gemini
-    const googleApiKey = process.env.GOOGLE_API_KEY;
-    if (!googleApiKey) throw new Error("GOOGLE_API_KEY is not set in Convex environment");
-
-    const embedRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${googleApiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "models/text-embedding-004",
-          content: { parts: [{ text: args.question }] },
-        }),
-      }
-    );
-
-    if (!embedRes.ok) {
-      throw new Error(`Google Embeddings API failed: ${embedRes.statusText}`);
-    }
-
-    const embedData = await embedRes.json();
-    const embeddingValues = embedData.embedding?.values;
-    if (!embeddingValues) throw new Error("Could not extract embedding from Google API response");
+    const hfToken = process.env.HF_TOKEN;
+    if (!hfToken) throw new Error("HF_TOKEN is not set in Convex environment");
+    
+    // We import this dynamically to be safe in Convex environment
+    const { HfInference } = await import("@huggingface/inference");
+    const hf = new HfInference(hfToken);
+    
+    const output = await hf.featureExtraction({
+      model: "sentence-transformers/all-MiniLM-L6-v2",
+      inputs: args.question,
+    });
+    
+    const embeddingValues = output as number[];
+    if (!Array.isArray(embeddingValues)) throw new Error("Could not extract embedding from HF API response");
 
     // Search Convex vector index
     const results = await ctx.vectorSearch("bookKnowledge", "by_embedding", {

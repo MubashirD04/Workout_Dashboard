@@ -25,7 +25,6 @@ A full-stack fitness and workout tracking application. Users log workouts, cardi
 │   ├── package.json
 │   └── vite.config.ts
 ├── convex/                 # Convex backend (serverless)
-│   ├── scripts/            # Seed/Migration scripts
 │   ├── schema.ts           # Convex schema and vector index definitions
 │   ├── workouts.ts         # Workout queries and mutations
 │   ├── cardioLogs.ts       # Cardio queries and mutations
@@ -34,6 +33,7 @@ A full-stack fitness and workout tracking application. Users log workouts, cardi
 │   ├── progressPhotos.ts   # Progress photo management
 │   ├── chat.ts             # RAG logic (Actions, Questions)
 │   └── ...
+├── scripts/                # Local utility scripts (e.g. data loader)
 ├── docs/                   # Project documentation
 │   ├── brief.md
 │   └── context.md
@@ -56,7 +56,7 @@ A full-stack fitness and workout tracking application. Users log workouts, cardi
 - **Runtime:** Convex Serverless Runtime
 - **Database:** Convex Document DB
 - **Vector Search:** Convex built-in Vector Index (`by_embedding`)
-- **Embeddings:** Google Gemini Embeddings API (`text-embedding-004`)
+- **Embeddings:** Hugging Face Inference API (`sentence-transformers/all-MiniLM-L6-v2`)
 - **LLM Inference:** Groq API (`llama-3.3-70b-versatile`)
 
 ### Database Schema (Convex)
@@ -77,7 +77,7 @@ A full-stack fitness and workout tracking application. Users log workouts, cardi
 ## RAG Pipeline
 
 1. **User Query**: Received via the `askQuestion` Convex Action.
-2. **Embed Query**: Query text is sent to Google Gemini Embeddings (`text-embedding-004`).
+2. **Embed Query**: Query text is sent to Hugging Face Inference API (`all-MiniLM-L6-v2`).
 3. **Vector Search**: Resulting vector is used to perform a `vectorSearch` against the `bookKnowledge` table in Convex.
 4. **Context Retrieval**:
     - Top matching chunks from book knowledge.
@@ -94,7 +94,8 @@ A full-stack fitness and workout tracking application. Users log workouts, cardi
 |---|---|---|
 | `VITE_CONVEX_URL` | Client | Backend connection URL |
 | `GROQ_API_KEY` | Convex Action | LLM inference |
-| `GOOGLE_API_KEY` | Convex Action | Google Gemini Embeddings |
+| `GOOGLE_API_KEY` | Convex Action | Google Gemini APIs |
+| `HF_TOKEN` | Convex Action | Hugging Face Inference API |
 
 ---
 

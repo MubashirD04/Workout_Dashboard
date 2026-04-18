@@ -28,7 +28,7 @@ A high-performance fitness and workout tracking application designed to help use
 
 - **Node.js**: v20 or higher
 - **Convex Account**: Sign up at [convex.dev](https://www.convex.dev/)
-- **Google Gemini API Key**: For embeddings (`text-embedding-004`)
+- **Hugging Face API Token**: For embeddings (`all-MiniLM-L6-v2`)
 - **Groq API Key**: For fast LLM inference (AI Chat)
 
 ### Setup
@@ -47,7 +47,7 @@ A high-performance fitness and workout tracking application designed to help use
       ```
     - Set up your Convex environment variables:
       ```bash
-      npx convex env set GOOGLE_API_KEY <your-gemini-key>
+      npx convex env set HF_TOKEN <your-huggingface-token>
       npx convex env set GROQ_API_KEY <your-groq-key>
       ```
 

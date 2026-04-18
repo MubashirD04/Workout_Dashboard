@@ -72,6 +72,6 @@ export default defineSchema({
     embedding: v.array(v.float64()),
   }).vectorIndex("by_embedding", {
     vectorField: "embedding",
-    dimensions: 768, // Google Gemini uses 768 dimensions for text-embedding-004 by default usually. We will use Google Gemini Embeddings.
+    dimensions: 384, // Using Hugging Face BAAI/bge-small-en-v1.5 (384 dimensions)
   }),
 });

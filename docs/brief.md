@@ -19,7 +19,7 @@ A personal fitness tracking dashboard with:
 |---|---|
 | Frontend | React + Vite + Tailwind + Recharts |
 | Backend | **Convex** (Document DB + Vector Index) |
-| Embeddings | **Google Gemini Embeddings** (`text-embedding-004`) |
+| Embeddings | **Hugging Face Inference API** (`all-MiniLM-L6-v2`) |
 | LLM | Groq (`llama-3.3-70b-versatile`) |
 | Hosting | Vercel (Frontend) + Convex (Backend) |
 
@@ -29,7 +29,7 @@ A personal fitness tracking dashboard with:
 
 - **`client/`**: React SPA using Tailwind for styling and Recharts for visualisations. Communicates with the backend using the Convex React SDK.
 - **`convex/`**: Serverless backend handling data storage, vector search, and background actions.
-- **AI/RAG**: Uses Google Gemini to embed book knowledge and user queries, Convex for vector retrieval, and Groq for generating responses.
+- **AI/RAG**: Uses Hugging Face to embed book knowledge and user queries, Convex for vector retrieval, and Groq for generating responses.
 
 ---
 
@@ -49,4 +49,4 @@ A personal fitness tracking dashboard with:
 - **Date handling**: All dates are stored as `YYYY-MM-DD` strings. JavaScript `Date` objects should be avoided for date-only fields to prevent timezone-related off-by-one errors.
 - **Duplicate workout guard**: A workout is considered a duplicate only if it shares both the exact `date` and `time`.
 - **Convex Actions**: RAG logic and external API calls (Gemini, Groq) must run in Convex Actions, as Queries and Mutations cannot perform external HTTP requests.
-- **Vector search**: Book knowledge chunks are embedded with Gemini's 768-dimensional model and stored in a Convex vector index.
+- **Vector search**: Book knowledge chunks are embedded with Hugging Face's 384-dimensional model (`sentence-transformers/all-MiniLM-L6-v2`) and stored in a Convex vector index.
