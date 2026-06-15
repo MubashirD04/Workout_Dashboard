@@ -6,10 +6,17 @@ import BodyMetrics from './pages/BodyMetrics';
 import NutritionTracker from './pages/NutritionTracker';
 import ProgressPhotos from './pages/ProgressPhotos';
 import DashboardHome from './pages/DashboardHome';
+import AdminPanel from './pages/Admin/AdminPanel';
+import ClientsView from './pages/Trainer/ClientsView';
+import ClientDetail from './pages/Trainer/ClientDetail';
+import ClaimInvite from './pages/Auth/ClaimInvite';
+
+import { UserSync } from './components/UserSync';
 
 function App() {
   return (
     <Router>
+      <UserSync />
       <DashboardLayout>
         <Routes>
           <Route path="/" element={<DashboardHome />} />
@@ -18,6 +25,10 @@ function App() {
           <Route path="/metrics" element={<BodyMetrics />} />
           <Route path="/nutrition" element={<NutritionTracker />} />
           <Route path="/photos" element={<ProgressPhotos />} />
+          <Route path="/admin" element={<AdminPanel />} />
+          <Route path="/clients" element={<ClientsView />} />
+          <Route path="/clients/:clientId" element={<ClientDetail />} />
+          <Route path="/invite/:code" element={<ClaimInvite />} />
         </Routes>
       </DashboardLayout>
     </Router>

@@ -13,6 +13,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@clerk/clerk-react": "^5.61.5",
     "@huggingface/inference": "^4.13.15",
     "convex": "^1.35.1",
     "csv-parse": "^6.2.1",

@@ -2,6 +2,7 @@ console.log('Convex API Client Initialized');
 import { ConvexHttpClient } from "convex/browser";
 
 const convexUrl = import.meta.env.VITE_CONVEX_URL || "http://localhost:3210";
+/** @deprecated Use useQuery/useMutation hooks instead */
 export const convexClient = new ConvexHttpClient(convexUrl);
 
 export const mapIds = (data: any): any => {

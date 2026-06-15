@@ -1,15 +1,27 @@
+// convex/bodyMetrics.ts
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { getAuthenticatedUser, assertCanReadUserData, assertCanWriteUserData } from "./lib/auth";
+import type { Id } from "./_generated/dataModel";
 
 export const getBodyMetrics = query({
-  args: {},
-  handler: async (ctx) => {
-    return await ctx.db.query("bodyMetrics").order("desc").collect();
+  args: { targetUserId: v.optional(v.id("users")) },
+  handler: async (ctx, args) => {
+    const me = await getAuthenticatedUser(ctx);
+    const targetId: Id<"users"> = args.targetUserId ?? me._id;
+    await assertCanReadUserData(ctx, me, targetId, false);
+
+    return await ctx.db
+      .query("bodyMetrics")
+      .withIndex("by_user", (q) => q.eq("userId", targetId))
+      .order("desc")
+      .collect();
   },
 });
 
 export const createBodyMetric = mutation({
   args: {
+    targetUserId: v.optional(v.id("users")),
     date: v.string(),
     weight: v.optional(v.number()),
     height: v.optional(v.number()),
@@ -21,6 +33,11 @@ export const createBodyMetric = mutation({
     thigh: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    return await ctx.db.insert("bodyMetrics", args);
+    const me = await getAuthenticatedUser(ctx);
+    const targetId: Id<"users"> = args.targetUserId ?? me._id;
+    await assertCanWriteUserData(ctx, me, targetId, false);
+
+    const { targetUserId, ...rest } = args;
+    return await ctx.db.insert("bodyMetrics", { ...rest, userId: targetId });
   },
 });

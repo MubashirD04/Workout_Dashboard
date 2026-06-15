@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { nutritionApi } from '../api/trackingApi';
-import { useFetch } from '../hooks/useFetch';
 import { getCurrentDate, formatDate } from '../utils/dateUtils';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
+import { usePaginatedQuery, useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import type { Id } from "../../../convex/_generated/dataModel";
 
 interface NutritionLog {
-    id: number;
+    _id: Id<"nutritionLogs">;
+    id?: string;
     date: string;
     calories: number;
     protein: number;
@@ -15,9 +17,21 @@ interface NutritionLog {
     fat: number;
 }
 
-const NutritionTracker: React.FC = () => {
-    const { data, refresh: refreshLogs } = useFetch(nutritionApi.getAll);
-    const logs = data || [];
+interface NutritionTrackerProps {
+    targetUserId?: Id<"users">;
+}
+
+const NutritionTracker: React.FC<NutritionTrackerProps> = ({ targetUserId }) => {
+    const queryArgs = targetUserId ? { targetUserId } : {};
+    const { results: rawLogs, status, loadMore } = usePaginatedQuery(
+        (api as any).nutritionLogs.getNutritionLogs,
+        queryArgs,
+        { initialNumItems: 10 }
+    );
+    const logs = (rawLogs || []).map(l => ({ ...l, id: l._id })) as NutritionLog[];
+
+    const createNutritionLog = useMutation(api.nutritionLogs.createNutritionLog);
+    const deleteNutritionLog = useMutation(api.nutritionLogs.deleteNutritionLog);
 
     const [date, setDate] = useState(getCurrentDate());
     const [calories, setCalories] = useState('');
@@ -30,15 +44,16 @@ const NutritionTracker: React.FC = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await nutritionApi.create({
+            const logData = {
                 date,
                 calories: parseInt(calories) || 0,
                 protein: parseInt(protein) || 0,
                 carbs: parseInt(carbs) || 0,
                 fat: parseInt(fat) || 0,
-            });
+            };
 
-            refreshLogs();
+            await createNutritionLog(targetUserId ? { ...logData, targetUserId } : logData);
+
             setCalories('');
             setProtein('');
             setCarbs('');
@@ -52,11 +67,10 @@ const NutritionTracker: React.FC = () => {
         }
     };
 
-    const handleDelete = async (id: number) => {
+    const handleDelete = async (id: Id<"nutritionLogs">) => {
         if (!window.confirm('Are you sure you want to delete this log?')) return;
         try {
-            await nutritionApi.delete(id);
-            refreshLogs();
+            await deleteNutritionLog({ id });
         } catch (error) {
             console.error('Error deleting log:', error);
             alert('Failed to delete log');
@@ -173,7 +187,7 @@ const NutritionTracker: React.FC = () => {
                         </thead>
                         <tbody className="divide-y divide-white/5">
                             {(logs as NutritionLog[]).map((log) => (
-                                <tr key={log.id} className="hover:bg-white/5 transition-colors group">
+                                <tr key={log._id} className="hover:bg-white/5 transition-colors group">
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-primary">
                                         {formatDate(log.date)}
                                     </td>
@@ -191,7 +205,7 @@ const NutritionTracker: React.FC = () => {
                                     </td>
                                     <td className="pl-2 pr-6 py-4 whitespace-nowrap text-sm text-right">
                                         <button
-                                            onClick={() => handleDelete(log.id)}
+                                            onClick={() => handleDelete(log._id)}
                                             className="p-1 text-slate-500 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
                                             title="Delete log"
                                         >
@@ -211,6 +225,18 @@ const NutritionTracker: React.FC = () => {
                             )}
                         </tbody>
                     </table>
+                    {status === "CanLoadMore" && (
+                        <div className="p-4 border-t border-white/5">
+                            <Button onClick={() => loadMore(10)} variant="secondary" className="w-full">
+                                Load More
+                            </Button>
+                        </div>
+                    )}
+                    {status === "LoadingMore" && (
+                        <div className="p-4 text-center text-slate-500 text-sm">
+                            Loading more...
+                        </div>
+                    )}
                 </div>
             </Card>
         </div>

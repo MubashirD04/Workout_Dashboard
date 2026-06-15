@@ -1,5 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { chatApi } from '../api/chatApi';
+import { useAction, useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
+import type { Id } from '../../../convex/_generated/dataModel';
+import { useCurrentUser } from '../hooks/useCurrentUser';
 
 interface Message {
     id?: number;
@@ -13,10 +16,13 @@ const FloatingChat: React.FC = () => {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
-    const [conversationId, setConversationId] = useState<number | null>(null);
+    const [convexConversationId, setConvexConversationId] = useState<Id<"conversations"> | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
-
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    const { user } = useCurrentUser();
+    const askQuestion = useAction(api.chat.askQuestion);
+    const createConversation = useMutation(api.chat.createConversation);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -31,7 +37,7 @@ const FloatingChat: React.FC = () => {
     }, [input]);
 
     const handleSend = async () => {
-        if (!input.trim() || loading) return;
+        if (!input.trim() || loading || !user) return;
 
         const userMessage: Message = { role: 'user', content: input };
         setMessages(prev => [...prev, userMessage]);
@@ -40,10 +46,18 @@ const FloatingChat: React.FC = () => {
         setLoading(true);
 
         try {
-            const response = await chatApi.ask(question, conversationId ?? undefined);
-            if (!conversationId && response.conversationId) {
-                setConversationId(response.conversationId);
+            let convId = convexConversationId;
+            if (!convId) {
+                convId = await createConversation({});
+                setConvexConversationId(convId);
             }
+
+            const response = await askQuestion({
+                question,
+                conversationId: convId,
+                targetUserId: user._id,
+            });
+
             setMessages(prev => [
                 ...prev,
                 { role: 'assistant', content: response.answer, sources: response.sources },
@@ -51,7 +65,7 @@ const FloatingChat: React.FC = () => {
         } catch (error: any) {
             setMessages(prev => [
                 ...prev,
-                { role: 'assistant', content: error?.error || error?.message || 'Something went wrong. Please try again.' },
+                { role: 'assistant', content: error?.message || 'Something went wrong. Please try again.' },
             ]);
         } finally {
             setLoading(false);
@@ -67,7 +81,7 @@ const FloatingChat: React.FC = () => {
 
     const handleNewChat = () => {
         setMessages([]);
-        setConversationId(null);
+        setConvexConversationId(null);
     };
 
     /* ── Collapsed button ── */

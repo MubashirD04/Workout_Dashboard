@@ -6,6 +6,7 @@ interface FetchState<T> {
     error: any;
 }
 
+/** @deprecated Transition to standard Convex React hooks (useQuery, usePaginatedQuery) */
 export function useFetch<T>(fetchFn: () => Promise<T>, deps: any[] = []) {
     const [state, setState] = useState<FetchState<T>>({
         data: undefined as unknown as T,

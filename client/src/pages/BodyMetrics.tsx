@@ -9,15 +9,17 @@ import {
     Legend,
     ResponsiveContainer,
 } from 'recharts';
-import { metricsApi } from '../api/trackingApi';
-import { useFetch } from '../hooks/useFetch';
 import { getCurrentDate } from '../utils/dateUtils';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
+import { usePaginatedQuery, useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import type { Id } from "../../../convex/_generated/dataModel";
 
 interface BodyMetric {
-    id: number;
+    _id: Id<"bodyMetrics">;
+    id?: string;
     date: string;
     weight: number;
     height: number;
@@ -29,12 +31,22 @@ interface BodyMetric {
     thigh: number;
 }
 
-const BodyMetrics: React.FC = () => {
-    const { data, refresh: refreshMetrics } = useFetch(async () => {
-        const result = await metricsApi.getAll();
-        return Array.isArray(result) ? result.sort((a: BodyMetric, b: BodyMetric) => new Date(a.date).getTime() - new Date(b.date).getTime()) : [];
-    });
-    const metrics = data || [];
+interface BodyMetricsProps {
+    targetUserId?: Id<"users">;
+}
+
+const BodyMetrics: React.FC<BodyMetricsProps> = ({ targetUserId }) => {
+    const queryArgs = targetUserId ? { targetUserId } : {};
+    const { results: rawMetrics, status, loadMore } = usePaginatedQuery(
+        (api as any).bodyMetrics.getBodyMetrics,
+        queryArgs,
+        { initialNumItems: 50 } // Fetch more for the chart
+    );
+    
+    // Sort chronological for the chart
+    const metrics = [...(rawMetrics || [])].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()) as BodyMetric[];
+    
+    const createBodyMetric = useMutation(api.bodyMetrics.createBodyMetric);
 
     const [date, setDate] = useState(getCurrentDate());
 
@@ -63,7 +75,7 @@ const BodyMetrics: React.FC = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await metricsApi.create({
+            const metricData = {
                 date,
                 weight: parseFloat(weight) || 0,
                 height: parseFloat(height) || 0,
@@ -73,9 +85,10 @@ const BodyMetrics: React.FC = () => {
                 hips: parseFloat(hips) || 0,
                 bicep: parseFloat(bicep) || 0,
                 thigh: parseFloat(thigh) || 0,
-            });
+            };
 
-            refreshMetrics();
+            await createBodyMetric(targetUserId ? { ...metricData, targetUserId } : metricData);
+
             alert('Metrics logged!');
             // Reset form except date
             setWeight('');
@@ -271,6 +284,13 @@ const BodyMetrics: React.FC = () => {
                         </LineChart>
                     </ResponsiveContainer>
                 </div>
+                {status === "CanLoadMore" && (
+                    <div className="mt-4 flex justify-center">
+                        <Button onClick={() => loadMore(50)} variant="secondary" className="px-8">
+                            Load More History
+                        </Button>
+                    </div>
+                )}
             </Card>
         </div>
     );

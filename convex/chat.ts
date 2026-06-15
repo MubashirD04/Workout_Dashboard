@@ -1,6 +1,10 @@
+// convex/chat.ts
 import { query, mutation, action, internalQuery, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
+import { getAuthenticatedUser } from "./lib/auth";
+
+declare const process: { env: Record<string, string | undefined> };
 
 export const getLatestChunkIndex = query({
   args: {},
@@ -13,18 +17,21 @@ export const getLatestChunkIndex = query({
 export const getConversations = query({
   args: {},
   handler: async (ctx) => {
-    const convos = await ctx.db.query("conversations").order("desc").take(20);
+    const me = await getAuthenticatedUser(ctx);
+
+    const convos = await ctx.db
+      .query("conversations")
+      .withIndex("by_user", (q) => q.eq("userId", me._id))
+      .order("desc")
+      .take(20);
+
     return Promise.all(
       convos.map(async (c) => {
-        const firstMessage = await ctx.db
-          .query("messages")
-          .withIndex("by_creation_time")
-          .filter((q) => q.eq(q.field("conversationId"), c._id))
+        const firstMessage = await (ctx.db
+          .query("messages") as any)
+          .withIndex("by_creation_time", (q: any) => q.eq("conversationId", c._id))
           .first();
-        return {
-          ...c,
-          first_message: firstMessage?.content,
-        };
+        return { ...c, first_message: firstMessage?.content };
       })
     );
   },
@@ -33,10 +40,10 @@ export const getConversations = query({
 export const clearChunks = mutation({
   args: {},
   handler: async (ctx) => {
+    const me = await getAuthenticatedUser(ctx);
+    if (me.role !== "admin") throw new Error("Admin only.");
     const chunks = await ctx.db.query("bookKnowledge").take(100);
-    for (const c of chunks) {
-      await ctx.db.delete(c._id);
-    }
+    for (const c of chunks) await ctx.db.delete(c._id);
     return chunks.length;
   },
 });
@@ -55,12 +62,14 @@ export const addChunk = mutation({
 
 export const addChunks = mutation({
   args: {
-    chunks: v.array(v.object({
-      book_title: v.string(),
-      chunk_index: v.number(),
-      content: v.string(),
-      embedding: v.array(v.float64()),
-    }))
+    chunks: v.array(
+      v.object({
+        book_title: v.string(),
+        chunk_index: v.number(),
+        content: v.string(),
+        embedding: v.array(v.float64()),
+      })
+    ),
   },
   handler: async (ctx, args) => {
     for (const chunk of args.chunks) {
@@ -72,10 +81,15 @@ export const addChunks = mutation({
 export const getConversation = query({
   args: { id: v.id("conversations") },
   handler: async (ctx, args) => {
-    return await ctx.db
-      .query("messages")
-      .withIndex("by_creation_time")
-      .filter((q) => q.eq(q.field("conversationId"), args.id))
+    const me = await getAuthenticatedUser(ctx);
+    const convo = await ctx.db.get(args.id);
+    if (!convo) return [];
+    if (convo.userId !== me._id && me.role !== "admin") {
+      throw new Error("Forbidden.");
+    }
+    return await (ctx.db
+      .query("messages") as any)
+      .withIndex("by_creation_time", (q: any) => q.eq("conversationId", args.id))
       .collect();
   },
 });
@@ -83,8 +97,10 @@ export const getConversation = query({
 export const createConversation = mutation({
   args: {},
   handler: async (ctx) => {
+    const me = await getAuthenticatedUser(ctx);
     const now = Date.now();
     return await ctx.db.insert("conversations", {
+      userId: me._id,
       created_at: now,
       updated_at: now,
     });
@@ -94,14 +110,18 @@ export const createConversation = mutation({
 export const deleteConversation = mutation({
   args: { id: v.id("conversations") },
   handler: async (ctx, args) => {
-    const messages = await ctx.db
-      .query("messages")
-      .withIndex("by_creation_time")
-      .filter((q) => q.eq(q.field("conversationId"), args.id))
-      .collect();
-    for (const msg of messages) {
-      await ctx.db.delete(msg._id);
+    const me = await getAuthenticatedUser(ctx);
+    const convo = await ctx.db.get(args.id);
+    if (!convo) throw new Error("Conversation not found.");
+    if (convo.userId !== me._id && me.role !== "admin") {
+      throw new Error("Forbidden.");
     }
+
+    const messages = await (ctx.db
+      .query("messages") as any)
+      .withIndex("by_creation_time", (q: any) => q.eq("conversationId", args.id))
+      .collect();
+    for (const msg of messages) await ctx.db.delete(msg._id);
     await ctx.db.delete(args.id);
   },
 });
@@ -126,44 +146,100 @@ export const addMessage = internalMutation({
   },
 });
 
-export const getFitnessContext = internalQuery({
-  args: {},
-  handler: async (ctx) => {
-    const workouts = await ctx.db.query("workouts").order("desc").take(5);
-    const cardio = await ctx.db.query("cardioLogs").order("desc").take(5);
-    const tmpMetrics = await ctx.db.query("bodyMetrics").order("desc").take(1);
-    const latestMetrics = tmpMetrics.length > 0 ? tmpMetrics[0] : null;
+// SECURITY: Added permission check for actions
+export const validateActionAccess = internalQuery({
+  args: {
+    tokenIdentifier: v.string(),
+    targetUserId: v.id("users"),
+    conversationId: v.optional(v.id("conversations")),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", args.tokenIdentifier))
+      .unique();
+    if (!user) throw new Error("User not found.");
 
-    let summary = 'User Fitness Data:\n\n';
+    if (args.conversationId) {
+      const convo = await ctx.db.get(args.conversationId);
+      if (!convo) throw new Error("Conversation not found.");
+      if (convo.userId !== user._id && user.role !== "admin") {
+        throw new Error("Forbidden: you do not own this conversation.");
+      }
+    }
+
+    // Role-based access to target user data
+    if (user.role === "admin") return { userId: args.targetUserId };
+    if (user.role === "trainer") {
+      const target = await ctx.db.get(args.targetUserId);
+      if (!target || target.trainerId !== user._id) {
+        throw new Error("Forbidden: this client is not assigned to you.");
+      }
+      return { userId: args.targetUserId };
+    }
+    
+    // Client
+    if (user._id !== args.targetUserId) {
+      throw new Error("Forbidden: you can only access your own data.");
+    }
+    
+    return { userId: args.targetUserId };
+  },
+});
+
+export const getFitnessContext = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const workouts = await ctx.db
+      .query("workouts")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .order("desc")
+      .take(5);
+
+    const cardio = await ctx.db
+      .query("cardioLogs")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .order("desc")
+      .take(5);
+
+    const tmpMetrics = await ctx.db
+      .query("bodyMetrics")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .order("desc")
+      .take(1);
+
+    const latestMetrics = tmpMetrics.length > 0 ? tmpMetrics[0] : null;
+    let summary = "User Fitness Data:\n\n";
 
     if (latestMetrics) {
-      summary += `Latest Metrics (${latestMetrics.date}):\n`;
-      summary += `- Weight: ${latestMetrics.weight}kg\n`;
-      if (latestMetrics.body_fat_perc) summary += `- Body Fat: ${latestMetrics.body_fat_perc}%\n`;
-      summary += '\n';
+      summary += `Latest Metrics (${latestMetrics.date}):\n- Weight: ${latestMetrics.weight}kg\n`;
+      if (latestMetrics.body_fat_perc)
+        summary += `- Body Fat: ${latestMetrics.body_fat_perc}%\n`;
+      summary += "\n";
     }
 
     if (workouts.length > 0) {
-      summary += 'Recent Workouts:\n';
+      summary += "Recent Workouts:\n";
       workouts.forEach((w, i) => {
         summary += `${i + 1}. ${w.date}: `;
-        const exerciseNames = w.exercises.map((e) => e.exercise_name).join(', ');
-        summary += exerciseNames || 'No exercises logged';
+        summary += w.exercises.map((e) => e.exercise_name).join(", ") || "No exercises";
         if (w.duration) summary += ` (${w.duration} min)`;
-        summary += '\n';
+        if (w.notes) summary += `\n   Notes: ${w.notes}`; // Included for potential injection check
+        summary += "\n";
       });
-      summary += '\n';
+      summary += "\n";
     }
 
     if (cardio.length > 0) {
-      summary += 'Recent Cardio:\n';
+      summary += "Recent Cardio:\n";
       cardio.forEach((c, i) => {
         summary += `${i + 1}. ${c.date}: ${c.type} - ${c.distance}km in ${c.duration} min\n`;
+        if (c.notes) summary += `   Notes: ${c.notes}\n`;
       });
     }
 
     if (!latestMetrics && workouts.length === 0 && cardio.length === 0) {
-      summary = 'No fitness data available yet.';
+      summary = "No fitness data available yet.";
     }
 
     return { summary };
@@ -173,12 +249,11 @@ export const getFitnessContext = internalQuery({
 export const getConversationHistory = internalQuery({
   args: { conversationId: v.id("conversations") },
   handler: async (ctx, args) => {
-    const messages = await ctx.db
-      .query("messages")
-      .withIndex("by_creation_time")
-      .filter((q) => q.eq(q.field("conversationId"), args.conversationId))
+    const messages = await (ctx.db
+      .query("messages") as any)
+      .withIndex("by_creation_time", (q: any) => q.eq("conversationId", args.conversationId))
       .collect();
-    return messages.map((m) => ({ role: m.role, content: m.content }));
+    return messages.map((m: any) => ({ role: m.role, content: m.content }));
   },
 });
 
@@ -198,38 +273,48 @@ export const askQuestion = action({
   args: {
     question: v.string(),
     conversationId: v.optional(v.id("conversations")),
+    // Trainer/admin can ask questions on behalf of a client context
+    targetUserId: v.id("users"),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<any> => {
+    // SECURITY: Authenticate the action caller
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+
+    // SECURITY: Validate that the caller has permission to access targetUserId
+    await ctx.runQuery(internal.chat.validateActionAccess, {
+      tokenIdentifier: identity.tokenIdentifier,
+      targetUserId: args.targetUserId,
+      conversationId: args.conversationId,
+    });
+
     const hfToken = process.env.HF_TOKEN;
     if (!hfToken) throw new Error("HF_TOKEN is not set in Convex environment");
-    
-    // We import this dynamically to be safe in Convex environment
+
     const { HfInference } = await import("@huggingface/inference");
     const hf = new HfInference(hfToken);
-    
+
     const output = await hf.featureExtraction({
       model: "sentence-transformers/all-MiniLM-L6-v2",
       inputs: args.question,
     });
-    
-    const embeddingValues = output as number[];
-    if (!Array.isArray(embeddingValues)) throw new Error("Could not extract embedding from HF API response");
 
-    // Search Convex vector index
+    const embeddingValues = output as number[];
+    if (!Array.isArray(embeddingValues))
+      throw new Error("Could not extract embedding from HF API response");
+
     const results = await ctx.vectorSearch("bookKnowledge", "by_embedding", {
       vector: embeddingValues,
       limit: 5,
     });
 
-    // Filter relevant (score > ~0.4 depends on Convex distance metric, but let's assume we take top 5 directly to start)
-    // You might experiment with appropriate thresholds for Gemini embeddings in Convex.
-    const relevantIds = results.filter(r => r._score > 0.4).map((r) => r._id);
-    const chunks = await ctx.runQuery(internal.chat.getChunks, { ids: relevantIds });
+    const relevantIds = results.filter((r) => r._score > 0.4).map((r) => r._id);
+    const chunks = await ctx.runQuery(internal.chat.getChunks, { ids: relevantIds }) as any;
 
-    // Fetch fitness context
-    const fitnessContext = await ctx.runQuery(internal.chat.getFitnessContext);
+    const fitnessContext = await ctx.runQuery(internal.chat.getFitnessContext, {
+      userId: args.targetUserId,
+    });
 
-    // Get conversation history
     let historyContext = "";
     if (args.conversationId) {
       const history = await ctx.runQuery(internal.chat.getConversationHistory, {
@@ -237,25 +322,34 @@ export const askQuestion = action({
       });
       historyContext = history
         .slice(-4)
-        .map((msg) => `${msg.role === "user" ? "User" : "Assistant"}: ${msg.content}`)
+        .map((msg: any) => `${msg.role === "user" ? "User" : "Assistant"}: ${msg.content}`)
         .join("\n");
     }
 
     const bookContext = chunks
-      .map((chunk, i) => `[Source ${i + 1}: ${chunk.book_title}]\n${chunk.content}`)
+      .map((chunk: any, i: number) => `[Source ${i + 1}: ${chunk.book_title}]\n${chunk.content}`)
       .join("\n\n---\n\n");
+
+    // SECURITY: Sanitize fitness context to prevent prompt injection from user notes
+    const sanitizedFitnessSummary = fitnessContext.summary
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
 
     const systemMessage = `You are an expert AI fitness and nutrition coach with access to professional fitness books and the user's personal fitness data.
 
 AVAILABLE INFORMATION:
 
 1. Book Knowledge:
+<book_knowledge>
 ${bookContext || "No relevant book content found."}
+</book_knowledge>
 
 2. User's Fitness Data:
-${fitnessContext.summary}
+<user_fitness_data>
+${sanitizedFitnessSummary}
+</user_fitness_data>
 
-${historyContext ? `3. Recent Conversation:\n${historyContext}\n` : ""}
+${historyContext ? `3. Recent Conversation:\n<conversation_history>\n${historyContext}\n</conversation_history>\n` : ""}
 INSTRUCTIONS:
 - Provide personalized advice based on the user's actual fitness data when relevant
 - Reference specific workouts, exercises, or metrics from their data
@@ -271,7 +365,7 @@ INSTRUCTIONS:
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${groqApiKey}`,
+        Authorization: `Bearer ${groqApiKey}`,
       },
       body: JSON.stringify({
         model: "llama-3.3-70b-versatile",
@@ -294,9 +388,8 @@ INSTRUCTIONS:
     const answer = groqData.choices?.[0]?.message?.content;
     if (!answer) throw new Error("No answer returned from Groq");
 
-    const sources = [...new Set(chunks.map((c) => c.book_title))];
+    const sources = [...new Set(chunks.map((c: any) => c.book_title))] as any;
 
-    // Persist messages if conversation exists
     if (args.conversationId) {
       await ctx.runMutation(internal.chat.addMessage, {
         conversationId: args.conversationId,

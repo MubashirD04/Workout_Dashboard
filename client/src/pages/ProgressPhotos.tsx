@@ -1,21 +1,34 @@
 import React, { useState } from 'react';
-import { photosApi } from '../api/trackingApi';
-import { useFetch } from '../hooks/useFetch';
 import { getCurrentDate, formatDate } from '../utils/dateUtils';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
+import { usePaginatedQuery, useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import type { Id } from "../../../convex/_generated/dataModel";
 
 interface PhotoLog {
-    id: number;
+    _id: Id<"progressPhotos">;
+    id?: string;
     date: string;
     photo_url: string;
     notes: string;
 }
 
-const ProgressPhotos: React.FC = () => {
-    const { data, refresh: refreshLogs } = useFetch(photosApi.getAll);
-    const logs = data || [];
+interface ProgressPhotosProps {
+    targetUserId?: Id<"users">;
+}
+
+const ProgressPhotos: React.FC<ProgressPhotosProps> = ({ targetUserId }) => {
+    const queryArgs = targetUserId ? { targetUserId } : {};
+    const { results: rawLogs, status, loadMore } = usePaginatedQuery(
+        (api as any).progressPhotos.getProgressPhotos,
+        queryArgs,
+        { initialNumItems: 6 }
+    );
+    const logs = (rawLogs || []).map(l => ({ ...l, id: l._id })) as PhotoLog[];
+
+    const createProgressPhoto = useMutation(api.progressPhotos.createProgressPhoto);
 
     const [date, setDate] = useState(getCurrentDate());
     const [photoUrl, setPhotoUrl] = useState('');
@@ -24,13 +37,14 @@ const ProgressPhotos: React.FC = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await photosApi.create({
+            const photoData = {
                 date,
                 photo_url: photoUrl,
                 notes,
-            });
+            };
+            
+            await createProgressPhoto(targetUserId ? { ...photoData, targetUserId } : photoData);
 
-            refreshLogs();
             setPhotoUrl('');
             setNotes('');
             alert('Photo Entry Logged!');
@@ -103,7 +117,7 @@ const ProgressPhotos: React.FC = () => {
 
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {(logs as PhotoLog[]).map((log) => (
-                    <Card key={log.id} className="overflow-hidden group p-0">
+                    <Card key={log._id} className="overflow-hidden group p-0">
                         <div className="p-4">
                             <div className="aspect-w-3 aspect-h-4 mb-4 overflow-hidden rounded-xl">
                                 <img
@@ -125,6 +139,19 @@ const ProgressPhotos: React.FC = () => {
                     </Card>
                 ))}
             </div>
+
+            {status === "CanLoadMore" && (
+                <div className="flex justify-center pt-8">
+                    <Button onClick={() => loadMore(6)} variant="secondary" className="px-12">
+                        Load More Photos
+                    </Button>
+                </div>
+            )}
+            {status === "LoadingMore" && (
+                <div className="text-center py-8 text-slate-500">
+                    Loading more...
+                </div>
+            )}
         </div>
     );
 };

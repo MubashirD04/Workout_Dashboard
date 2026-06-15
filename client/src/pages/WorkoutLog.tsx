@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import WorkoutMaxWeightChart from '../components/WorkoutMaxWeightChart';
-import { workoutApi } from '../api/workoutApi';
-import { useFetch } from '../hooks/useFetch';
 import { formatDate, getCurrentDate, getCurrentTime } from '../utils/dateUtils';
 import { calculateWorkoutVolume } from '../utils/calculationUtils';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
+import { usePaginatedQuery, useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import type { Id } from "../../../convex/_generated/dataModel";
 
 interface Exercise {
     exercise_name: string;
@@ -16,7 +17,8 @@ interface Exercise {
 }
 
 interface Workout {
-    id: number;
+    _id: Id<"workouts">;
+    id?: string; // for backward compatibility in UI
     date: string;
     time: string | null;
     duration: number | null;
@@ -24,10 +26,27 @@ interface Workout {
     exercises?: Exercise[];
 }
 
-const WorkoutLog: React.FC = () => {
-    const { data, loading, error, refresh: refreshWorkouts } = useFetch(workoutApi.getAll);
-    const workouts = data || [];
-    console.log('WorkoutLog Rendering', { workoutsCount: workouts.length, loading, error });
+interface WorkoutLogProps {
+    targetUserId?: Id<"users">;
+}
+
+const WorkoutLog: React.FC<WorkoutLogProps> = ({ targetUserId }) => {
+    const queryArgs = targetUserId ? { targetUserId } : {};
+    const { results: rawWorkouts, status, loadMore } = usePaginatedQuery(
+        (api as any).workouts.getWorkouts,
+        queryArgs,
+        { initialNumItems: 10 }
+    );
+
+    // Map _id to id for UI compatibility
+    const workouts = (rawWorkouts || []).map(w => ({ ...w, id: w._id })) as Workout[];
+
+    
+    const createWorkout = useMutation(api.workouts.createWorkout);
+    const updateWorkout = useMutation(api.workouts.updateWorkout);
+    const deleteWorkoutMutation = useMutation(api.workouts.deleteWorkout);
+
+    console.log('WorkoutLog Rendering', { workoutsCount: workouts.length, status });
 
     const [date, setDate] = useState(getCurrentDate());
     const [time, setTime] = useState(getCurrentTime());
@@ -42,7 +61,7 @@ const WorkoutLog: React.FC = () => {
     const [weight, setWeight] = useState(0);
 
     // Edit mode and UI state
-    const [editingWorkoutId, setEditingWorkoutId] = useState<number | null>(null);
+    const [editingWorkoutId, setEditingWorkoutId] = useState<Id<"workouts"> | null>(null);
     const [isExpanded, setIsExpanded] = useState(false);
 
     const commonExercises = [
@@ -81,22 +100,21 @@ const WorkoutLog: React.FC = () => {
                 date,
                 notes,
                 exercises: currentExercises,
-                time: time || null,
-                duration: duration || null,
+                time: time || undefined,
+                duration: duration || undefined,
             };
 
             if (editingWorkoutId) {
-                await workoutApi.update(editingWorkoutId, workoutData);
+                await updateWorkout({ id: editingWorkoutId, ...workoutData });
             } else {
-                await workoutApi.create(workoutData);
+                await createWorkout(targetUserId ? { ...workoutData, targetUserId } : workoutData);
             }
 
-            refreshWorkouts();
             resetForm();
             alert(editingWorkoutId ? 'Workout updated!' : 'Workout saved!');
         } catch (error: any) {
             console.error('Error saving/updating workout:', error);
-            alert(error.error || `Failed to ${editingWorkoutId ? 'update' : 'save'} workout`);
+            alert(error.message || `Failed to ${editingWorkoutId ? 'update' : 'save'} workout`);
         }
     };
 
@@ -110,32 +128,30 @@ const WorkoutLog: React.FC = () => {
         setIsExpanded(false);
     };
 
-    const loadWorkoutForEdit = async (workoutId: number) => {
+    const loadWorkoutForEdit = async (workout: Workout) => {
         try {
-            const data = await workoutApi.getById(workoutId);
-            setEditingWorkoutId(data.id);
+            setEditingWorkoutId(workout._id);
             setIsExpanded(true);
 
-            const formattedDate = data.date.split('T')[0];
+            const formattedDate = workout.date.split('T')[0];
 
             setDate(formattedDate);
-            setTime(data.time || '');
-            setDuration(data.duration || 0);
-            setNotes(data.notes || '');
-            setCurrentExercises(data.exercises || []);
+            setTime(workout.time || '');
+            setDuration(workout.duration || 0);
+            setNotes(workout.notes || '');
+            setCurrentExercises(workout.exercises || []);
             window.scrollTo({ top: 0, behavior: 'smooth' });
         } catch (error) {
             console.error('Error loading workout details:', error);
         }
     };
 
-    const handleDeleteWorkout = async (e: React.MouseEvent, workoutId: number) => {
+    const handleDeleteWorkout = async (e: React.MouseEvent, workoutId: Id<"workouts">) => {
         e.stopPropagation();
         if (!window.confirm('Are you sure you want to delete this workout?')) return;
 
         try {
-            await workoutApi.delete(workoutId);
-            refreshWorkouts();
+            await deleteWorkoutMutation({ id: workoutId });
             if (editingWorkoutId === workoutId) {
                 resetForm();
             }
@@ -387,9 +403,9 @@ const WorkoutLog: React.FC = () => {
 
                             return (
                                 <div
-                                    key={workout.id}
-                                    onClick={() => loadWorkoutForEdit(workout.id)}
-                                    className={`bg-slate-800/50 hover:bg-slate-800 border ${editingWorkoutId === workout.id ? 'border-primary' : 'border-white/5'} hover:border-primary/30 rounded-lg p-4 transition-all w-full text-left group cursor-pointer`}
+                                    key={workout._id}
+                                    onClick={() => loadWorkoutForEdit(workout)}
+                                    className={`bg-slate-800/50 hover:bg-slate-800 border ${editingWorkoutId === workout._id ? 'border-primary' : 'border-white/5'} hover:border-primary/30 rounded-lg p-4 transition-all w-full text-left group cursor-pointer`}
                                 >
                                     <div className="flex justify-between items-start mb-3">
                                         <div className="flex flex-col">
@@ -405,7 +421,7 @@ const WorkoutLog: React.FC = () => {
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <button
-                                                onClick={(e) => handleDeleteWorkout(e, workout.id)}
+                                                onClick={(e) => handleDeleteWorkout(e, workout._id)}
                                                 className="p-1.5 text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all rounded hover:bg-red-400/10"
                                                 title="Delete Workout"
                                             >
@@ -441,6 +457,22 @@ const WorkoutLog: React.FC = () => {
                                 </div>
                             );
                         })}
+
+                        {status === "CanLoadMore" && (
+                            <Button 
+                                onClick={() => loadMore(10)} 
+                                variant="secondary" 
+                                className="w-full py-3 mt-4"
+                            >
+                                Load More
+                            </Button>
+                        )}
+
+                        {status === "LoadingMore" && (
+                            <div className="text-center py-4 text-slate-500">
+                                <p>Loading more...</p>
+                            </div>
+                        )}
 
                         {workouts.length === 0 && (
                             <div className="text-center py-10 text-slate-500">

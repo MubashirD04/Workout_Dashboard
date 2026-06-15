@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import CardioProgressChart from '../components/CardioProgressChart';
-import { cardioApi } from '../api/trackingApi';
-import { useFetch } from '../hooks/useFetch';
 import { formatDate, getCurrentDate, getCurrentTime } from '../utils/dateUtils';
 import { calculatePace } from '../utils/calculationUtils';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
+import { usePaginatedQuery, useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import type { Id } from "../../../convex/_generated/dataModel";
 
 interface CardioLog {
-    id: number;
+    _id: Id<"cardioLogs">;
+    id?: string;
     date: string;
     type: string;
     distance: number;
@@ -18,10 +20,25 @@ interface CardioLog {
     time: string | null;
 }
 
-const CardioTracker: React.FC = () => {
-    const { data, loading, error, refresh: refreshLogs } = useFetch(cardioApi.getAll);
-    const logs = data || [];
-    console.log('CardioTracker Rendering', { logsCount: logs.length, loading, error });
+interface CardioTrackerProps {
+    targetUserId?: Id<"users">;
+}
+
+const CardioTracker: React.FC<CardioTrackerProps> = ({ targetUserId }) => {
+    const queryArgs = targetUserId ? { targetUserId } : {};
+    const { results: rawLogs, status, loadMore } = usePaginatedQuery(
+        (api as any).cardioLogs.getCardioLogs,
+        queryArgs,
+        { initialNumItems: 10 }
+    );
+    const logs = (rawLogs || []).map(l => ({ ...l, id: l._id })) as CardioLog[];
+
+    const createCardioLog = useMutation(api.cardioLogs.createCardioLog);
+    const updateCardioLog = useMutation(api.cardioLogs.updateCardioLog);
+    const deleteCardioLog = useMutation(api.cardioLogs.deleteCardioLog);
+
+
+    console.log('CardioTracker Rendering', { logsCount: logs.length, status });
 
     const [date, setDate] = useState(getCurrentDate());
     const [time, setTime] = useState(getCurrentTime());
@@ -32,7 +49,7 @@ const CardioTracker: React.FC = () => {
 
     // UI State
     const [isExpanded, setIsExpanded] = useState(false);
-    const [editingLogId, setEditingLogId] = useState<number | null>(null);
+    const [editingLogId, setEditingLogId] = useState<Id<"cardioLogs"> | null>(null);
     const [isTimeDropdownOpen, setIsTimeDropdownOpen] = useState(false);
 
     const cardioTypes = ["Run", "Cycle", "Swim", "Walk", "Hike", "Rowing", "Elliptical", "Other"];
@@ -54,16 +71,15 @@ const CardioTracker: React.FC = () => {
                 distance: parseFloat(String(distance)),
                 duration: parseInt(String(duration)),
                 notes,
-                time: time || null,
+                time: time || undefined,
             };
 
             if (editingLogId) {
-                await cardioApi.update(editingLogId, logData);
+                await updateCardioLog({ id: editingLogId, ...logData });
             } else {
-                await cardioApi.create(logData);
+                await createCardioLog(targetUserId ? { ...logData, targetUserId } : logData);
             }
 
-            refreshLogs();
             resetForm();
             alert(editingLogId ? 'Session updated!' : 'Session logged!');
         } catch (error) {
@@ -84,7 +100,7 @@ const CardioTracker: React.FC = () => {
     };
 
     const loadLogForEdit = (log: CardioLog) => {
-        setEditingLogId(log.id);
+        setEditingLogId(log._id);
         setIsExpanded(true);
 
         const formattedDate = log.date.split('T')[0];
@@ -98,12 +114,11 @@ const CardioTracker: React.FC = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    const handleDelete = async (e: React.MouseEvent, id: number) => {
+    const handleDelete = async (e: React.MouseEvent, id: Id<"cardioLogs">) => {
         e.stopPropagation();
         if (!window.confirm('Are you sure you want to delete this log?')) return;
         try {
-            await cardioApi.delete(id);
-            refreshLogs();
+            await deleteCardioLog({ id });
             if (editingLogId === id) resetForm();
         } catch (error) {
             console.error('Error deleting log:', error);
@@ -276,9 +291,9 @@ const CardioTracker: React.FC = () => {
                         <tbody className="divide-y divide-white/5">
                             {(logs as any[]).map((log: any) => (
                                 <tr
-                                    key={log.id}
+                                    key={log._id}
                                     onClick={() => loadLogForEdit(log)}
-                                    className={`hover:bg-white/5 cursor-pointer transition-colors group ${editingLogId === log.id ? 'bg-primary/5' : ''}`}
+                                    className={`hover:bg-white/5 cursor-pointer transition-colors group ${editingLogId === log._id ? 'bg-primary/5' : ''}`}
                                 >
                                     <td className="px-6 sm:px-8 py-4 whitespace-nowrap">
                                         <div className="text-sm font-bold text-white">{formatDate(log.date)}</div>
@@ -303,7 +318,7 @@ const CardioTracker: React.FC = () => {
                                     </td>
                                     <td className="px-6 sm:px-8 py-4 text-right">
                                         <button
-                                            onClick={(e) => handleDelete(e, log.id)}
+                                            onClick={(e) => handleDelete(e, log._id)}
                                             className="p-1.5 text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all rounded hover:bg-red-400/10"
                                         >
                                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
@@ -320,6 +335,18 @@ const CardioTracker: React.FC = () => {
                             )}
                         </tbody>
                     </table>
+                    {status === "CanLoadMore" && (
+                        <div className="p-4 border-t border-white/5">
+                            <Button onClick={() => loadMore(10)} variant="secondary" className="w-full">
+                                Load More
+                            </Button>
+                        </div>
+                    )}
+                    {status === "LoadingMore" && (
+                        <div className="p-4 text-center text-slate-500 text-sm">
+                            Loading more...
+                        </div>
+                    )}
                 </div>
             </Card>
         </div>

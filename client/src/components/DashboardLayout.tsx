@@ -6,8 +6,12 @@ interface DashboardLayoutProps {
     children: React.ReactNode;
 }
 
+import { UserButton } from "@clerk/clerk-react";
+import { useCurrentUser } from '../hooks/useCurrentUser';
+
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     const location = useLocation();
+    const { isAdmin, canViewClients } = useCurrentUser();
 
     const navItems = [
         { path: '/', label: 'Overview' },
@@ -17,6 +21,13 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
         { path: '/nutrition', label: 'Nutrition' },
         { path: '/photos', label: 'Photos' },
     ];
+
+    if (canViewClients) {
+        navItems.push({ path: '/clients', label: 'Clients' });
+    }
+    if (isAdmin) {
+        navItems.push({ path: '/admin', label: 'Admin' });
+    }
 
     return (
         <div className="min-h-screen bg-slate-950 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black text-white selection:bg-primary/30">
@@ -57,9 +68,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 
                         {/* Profile - Column 3 (Right aligned) */}
                         <div className="flex items-center justify-end">
-                            <div className="h-8 w-8 rounded-full bg-slate-800 border border-white/10 flex items-center justify-center text-xs text-slate-400 cursor-pointer hover:border-primary/50 transition-colors">
-                                MP
-                            </div>
+                            <UserButton afterSignOutUrl="/" />
                         </div>
                     </div>
                 </div>

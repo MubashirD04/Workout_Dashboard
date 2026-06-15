@@ -4,7 +4,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { ConvexHttpClient } from "convex/browser";
 import dotenv from "dotenv";
-import { anyApi } from "convex/server";
+import { api } from "../convex/_generated/api.js";
 import { HfInference } from "@huggingface/inference";
 
 dotenv.config({ path: path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../.env") });
@@ -30,7 +30,7 @@ interface CsvRow {
 }
 
 const BATCH_SIZE = 50;
-const MAX_RETRIES = 3;
+const MAX_RETRIES = 5;
 
 async function embedBatchWithRetry(texts: string[], retries = 0): Promise<number[][]> {
   try {
@@ -41,8 +41,8 @@ async function embedBatchWithRetry(texts: string[], retries = 0): Promise<number
     return output as Extract<typeof output, number[][]>;
   } catch (err: any) {
     if (retries < MAX_RETRIES) {
-      console.warn(`[load] HF API Error: ${err.message}. Retrying... (${retries + 1}/${MAX_RETRIES})`);
-      await delay(3000 * (retries + 1)); // Exponential backoff
+      console.warn(`[load] HF API Error: ${err.message}. Retrying in ${5 * (retries + 1)}s...`);
+      await delay(5000 * (retries + 1));
       return embedBatchWithRetry(texts, retries + 1);
     }
     throw err;
@@ -52,24 +52,30 @@ async function embedBatchWithRetry(texts: string[], retries = 0): Promise<number
 const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
 async function main() {
+  const resetMode = process.argv.includes("--reset");
+
   console.log("=================================================");
-  console.log(" Safe & Limit-Compliant Embedding Sync");
+  console.log(" Atomic & Resumable Embedding Loader");
   console.log("=================================================");
 
-  console.log(`[load] Clearing existing chunks from Convex...`);
-  let deletedCount = 0;
-  while (true) {
-    const deleted = await client.mutation(anyApi.chat.clearChunks);
-    if (deleted === 0) break;
-    deletedCount += deleted;
-    console.log(`[load] Deleted ${deletedCount} chunks...`);
+  if (resetMode) {
+    console.log("[load] --reset flag detected. Clearing existing chunks...");
+    let deletedTotal = 0;
+    while (true) {
+      const deleted = await client.mutation(api.chat.clearChunks);
+      if (deleted === 0) break;
+      deletedTotal += deleted;
+      process.stdout.write(`\r[load] Deleted ${deletedTotal} chunks...`);
+    }
+    console.log("\n[load] Clear complete.");
   }
-  console.log(`[load] Cleared all ${deletedCount} existing chunks.`);
-  
-  const existingCount = 0; // Fresh start
+
+  // 1. Get current state to resume
+  const latest: any = await client.query(api.chat.getLatestChunkIndex);
+  console.log(`[load] Current state in database:`, latest || "Empty");
 
   // 2. Parse CSV
-  const rows: CsvRow[] = [];
+  const allRows: CsvRow[] = [];
   const parser = createReadStream(CSV_PATH).pipe(
     parse({
       columns: true,
@@ -79,43 +85,61 @@ async function main() {
   );
 
   for await (const row of parser) {
-    rows.push(row as CsvRow);
+    allRows.push(row as CsvRow);
+  }
+  console.log(`[load] Total chunks in CSV source: ${allRows.length}`);
+
+  // 3. Determine where to start
+  let startIdx = 0;
+  if (latest && !resetMode) {
+    // Basic resumption: find the first chunk that isn't in the DB
+    // Optimization: find index of latest and start after
+    const idx = allRows.findIndex(r => 
+      r.book_title === latest.book_title && 
+      parseInt(r.chunk_index, 10) === latest.chunk_index
+    );
+    if (idx !== -1) {
+      startIdx = idx + 1;
+      console.log(`[load] Resuming from index ${startIdx} (after ${latest.book_title} #${latest.chunk_index})`);
+    }
   }
 
-  console.log(`[load] Total rows mapped from CSV source: ${rows.length}`);
+  if (startIdx >= allRows.length) {
+    console.log("[load] Database is already up to date. Nothing to do.");
+    return;
+  }
 
-  // 3. Sync Batches safely, skipping what's already completed
-  for (let i = existingCount; i < rows.length; i += BATCH_SIZE) {
-    const batch = rows.slice(i, i + BATCH_SIZE);
-    const texts = batch.map(r => r.content);
-
+  // 4. Batched Processing
+  for (let i = startIdx; i < allRows.length; i += BATCH_SIZE) {
+    const chunkBatch = allRows.slice(i, i + BATCH_SIZE);
+    
     try {
-      console.log(`[load] Embedding batch starting at index ${i}...`);
-      const embeddings = await embedBatchWithRetry(texts);
-
-      // Mutate via a SINGLE batched mutation to prevent concurrent transaction HTTP flooding.
-      const payload = batch.map((row, index) => ({
+      process.stdout.write(`[load] Processing batch ${Math.floor(i / BATCH_SIZE) + 1}... `);
+      
+      const embeddings = await embedBatchWithRetry(chunkBatch.map(r => r.content));
+      
+      const payload = chunkBatch.map((row, index) => ({
         book_title: row.book_title,
         chunk_index: parseInt(row.chunk_index, 10),
         content: row.content,
         embedding: embeddings[index],
       }));
 
-      await client.mutation(anyApi.chat.addChunks, { chunks: payload });
+      await client.mutation(api.chat.addChunks, { chunks: payload });
 
-      console.log(`[load] Inserted payload. Progress: ${i + batch.length}/${rows.length} successful.`);
+      console.log(`Success (${i + chunkBatch.length}/${allRows.length} chunks)`);
       
-      // Delay to respect rate limits gracefully
-      await delay(500); 
+      // Respect HF free tier or shared limits
+      await delay(200);
 
-    } catch (err) {
-      console.error(`\n[load] Fatal Error processing batch at index ${i}:`, err);
-      console.log(`[load] Terminating safety measures. You can restart the script to safely resume.`);
+    } catch (err: any) {
+      console.error(`\n[load] Fatal Error at chunk ${i}:`, err.message);
+      console.log("[load] You can safely restart this script to resume from this point.");
       process.exit(1);
     }
   }
 
-  console.log("\n[load] Sync process finished successfully! No skipped errors.");
+  console.log("\n[load] Successfully synchronized knowledge base.");
 }
 
 main().catch(console.error);

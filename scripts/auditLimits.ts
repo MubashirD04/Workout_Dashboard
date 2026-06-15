@@ -2,7 +2,7 @@ import { ConvexHttpClient } from "convex/browser";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
-import { anyApi } from "convex/server";
+import { api } from "../convex/_generated/api.js";
 
 dotenv.config({ path: path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../.env") });
 dotenv.config({ path: path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../.env.local") });
@@ -20,52 +20,72 @@ async function main() {
   console.log(" Running Convex Limits Audit...");
   console.log("=================================================");
 
-  try {
-    const stats: Record<string, { count: number; avgDocSizeBytes: number; danger: boolean }> = 
-      await client.query(anyApi.audit.getTableStats as any, {});
+  const tables = ["bookKnowledge", "workouts", "cardioLogs", "bodyMetrics", "nutritionLogs"];
+  const SCAN_LIMIT = 32000;
+  const RETURN_LIMIT_BYTES = 16 * 1024 * 1024; // 16 MiB
 
-    const SCAN_LIMIT = 32000;
-    const RETURN_LIMIT_BYTES = 16 * 1024 * 1024; // 16 MiB
+  for (const table of tables) {
+    console.log(`\n📦 Table: ${table}`);
+    
+    let totalCount = 0;
+    let totalBytes = 0;
+    let cursor: string | null = null;
+    let isDone = false;
+    let error = null;
 
-    for (const [table, data] of Object.entries(stats)) {
-      console.log(`\n📦 Table: ${table}`);
-      
-      if (data.count === -1) {
-        console.log(`  ❌ CRITICAL DANGER: Table failed to process.`);
-        console.log(`  Reason: Table has either surpassed the ${SCAN_LIMIT} scan limit or the 16 MiB read transaction boundary.`);
-        console.log(`  Action Needed: Convert all .collect() references for this table into paginated queries immediately.`);
-        continue;
+    process.stdout.write("  Scanning... ");
+    
+    try {
+      while (!isDone) {
+        const result: any = await client.query(api.audit.getTableChunk, {
+          table,
+          cursor,
+          numItems: 1000,
+        });
+
+        totalCount += result.count;
+        totalBytes += result.bytes;
+        cursor = result.continueCursor;
+        isDone = result.isDone;
+        
+        process.stdout.write(`${totalCount} `);
+        
+        // Safety break for audit
+        if (totalCount > 1000000) {
+          console.log("\n  ⚠️ Audit capped at 1M rows for performance.");
+          break;
+        }
       }
+      console.log("Done.");
 
-      console.log(`  Rows found: ${data.count}`);
-      console.log(`  Avg Row Size: ~${Math.round(data.avgDocSizeBytes)} Bytes`);
-
-      const estimatedTotalBytes = data.count * data.avgDocSizeBytes;
-      const mbSize = (estimatedTotalBytes / (1024 * 1024)).toFixed(2);
+      const avgSize = totalCount > 0 ? Math.round(totalBytes / totalCount) : 0;
+      const mbSize = (totalBytes / (1024 * 1024)).toFixed(2);
       
+      console.log(`  Rows found: ${totalCount}`);
+      console.log(`  Avg Row Size: ~${avgSize} Bytes`);
       console.log(`  Estimated Total Size: ~${mbSize} MiB`);
 
-      if (data.count > 10000) {
-        console.log(`  ⚠️  WARNING: Row count is approaching the ${SCAN_LIMIT} scan limit. Ensure pagination is utilized.`);
+      if (totalCount > 10000) {
+        console.log(`  ⚠️  WARNING: Row count exceeds 10k. Ensure all frontend queries are paginated.`);
       }
       
-      if (estimatedTotalBytes > (RETURN_LIMIT_BYTES * 0.5)) {
-        console.log(`  ⚠️  WARNING: Total payload size is approaching the 16 MiB transaction return limit.`);
+      if (totalBytes > (RETURN_LIMIT_BYTES * 0.5)) {
+        console.log(`  ⚠️  WARNING: Total table size is over 8 MiB. Be careful with wide scans.`);
       }
 
-      if (!data.danger && data.count <= 10000 && estimatedTotalBytes <= (RETURN_LIMIT_BYTES * 0.5)) {
+      if (totalCount <= 10000 && totalBytes <= (RETURN_LIMIT_BYTES * 0.5)) {
         console.log(`  ✅ Health check passed. Within safe bounds.`);
       }
+
+    } catch (err: any) {
+      console.log("\n  ❌ Error auditing table:", err.message);
     }
-
-    console.log("\n=================================================");
-    console.log(" Audit Complete.");
-    console.log(" For full real-time analysis, check the 'Health & Insights' panel in your Convex Deployment Dashboard.");
-    console.log("=================================================\n");
-
-  } catch (err) {
-    console.error("Failed to run audit query:", err);
   }
+
+  console.log("\n=================================================");
+  console.log(" Audit Complete.");
+  console.log(" For full real-time analysis, check the 'Health & Insights' panel in your Convex Deployment Dashboard.");
+  console.log("=================================================\n");
 }
 
 main().catch(console.error);
