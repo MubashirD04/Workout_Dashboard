@@ -6,10 +6,13 @@ A high-performance fitness and workout tracking application designed to help use
 
 - **`client/`**: Frontend application built with **React**, **Vite**, **Tailwind CSS**, and **Recharts**.
 - **`convex/`**: Backend built with **Convex** (serverless, document database, and vector search).
-- **`docs/`**: Project documentation (Brief and Technical Context).
+- **`scripts/`**: Local utility scripts (embedding loader, limits audit).
+- **`docs/`**: Project documentation (Brief, Technical Context, Convex limits guide).
 
 ## Features
 
+- **🔐 Authentication & Roles**: Clerk-powered sign-in with three roles — **admin**, **trainer**, and **client**.
+- **👥 Trainer Portal**: Trainers manage clients, generate invite codes, and view client fitness data (excluding progress photos).
 - **🤖 AI Fitness Coach**: Professional AI coach using RAG (Retrieval-Augmented Generation) to provide personalized fitness advice based on your data and expert knowledge.
 - **📊 Advanced Analytics**:
   - **Volume Chart**: Track total weight moved over time.
@@ -20,7 +23,7 @@ A high-performance fitness and workout tracking application designed to help use
 - **🏃 Cardio Tracking**: Log distance and duration for various activities.
 - **📏 Body Metrics**: Comprehensive tracking of weight and body measurements.
 - **🍎 Nutrition Tracker**: Monitor daily calories and macro targets.
-- **🖼️ Progress Timeline**: Visual photo journey of your transformation.
+- **🖼️ Progress Timeline**: Visual photo journey of your transformation (client-only; trainers cannot access).
 
 ## Quick Start
 
@@ -28,41 +31,66 @@ A high-performance fitness and workout tracking application designed to help use
 
 - **Node.js**: v20 or higher
 - **Convex Account**: Sign up at [convex.dev](https://www.convex.dev/)
+- **Clerk Account**: Sign up at [clerk.com](https://clerk.com/) for authentication
 - **Hugging Face API Token**: For embeddings (`all-MiniLM-L6-v2`)
 - **Groq API Key**: For fast LLM inference (AI Chat)
 
 ### Setup
 
-1.  **Clone the repository**:
+1. **Clone the repository**:
 
-    ```bash
-    git clone <repository-url>
-    cd Workout_Dashboard
-    ```
+   ```bash
+   git clone <repository-url>
+   cd Workout_Dashboard
+   ```
 
-2.  **Environment Setup**:
-    - In the root directory, run:
-      ```bash
-      npm install
-      ```
-    - Set up your Convex environment variables:
-      ```bash
-      npx convex env set HF_TOKEN <your-huggingface-token>
-      npx convex env set GROQ_API_KEY <your-groq-key>
-      ```
+2. **Install dependencies**:
 
-3.  **Run Development Environment**:
-    - Start the Convex dev server and the React frontend:
+   ```bash
+   npm install
+   cd client && npm install && cd ..
+   ```
 
-      ```bash
-      # Tab 1: Convex backend
-      npx convex dev
+3. **Configure Clerk + Convex auth**:
+   - Create a Clerk application and add the **Convex** integration.
+   - In the Convex dashboard, set `CLERK_JWT_ISSUER_DOMAIN` to your Clerk JWT issuer domain.
 
-      # Tab 2: Frontend
-      cd client
-      npm install
-      npm run dev
-      ```
+4. **Set environment variables**:
+
+   **Client** (`client/.env.local`):
+
+   ```bash
+   VITE_CONVEX_URL=<your-convex-deployment-url>
+   VITE_CLERK_PUBLISHABLE_KEY=<your-clerk-publishable-key>
+   ```
+
+   **Convex** (via CLI):
+
+   ```bash
+   npx convex env set CLERK_JWT_ISSUER_DOMAIN <your-clerk-jwt-issuer-domain>
+   npx convex env set HF_TOKEN <your-huggingface-token>
+   npx convex env set GROQ_API_KEY <your-groq-key>
+   ```
+
+5. **Load book knowledge** (optional, for AI coach RAG):
+
+   ```bash
+   # Requires book_knowledge.csv in the repo root and HF_TOKEN in .env.local
+   npx tsx scripts/loadEmbeddings.ts
+   ```
+
+6. **Run the development environment**:
+
+   ```bash
+   # Tab 1: Convex backend
+   npx convex dev
+
+   # Tab 2: Frontend
+   cd client
+   npm run dev
+   ```
+
+   The first user to sign in is automatically assigned the **admin** role.
 
 ## Documentation
 
@@ -70,3 +98,4 @@ For more detailed information, please refer to:
 
 - [Brief](docs/brief.md)
 - [Technical Context](docs/context.md)
+- [Convex Limits & Pagination](docs/convex_limits_and_pagination.md)

@@ -1,11 +1,15 @@
 // convex/bodyMetrics.ts
 import { query, mutation } from "./_generated/server";
+import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 import { getAuthenticatedUser, assertCanReadUserData, assertCanWriteUserData } from "./lib/auth";
 import type { Id } from "./_generated/dataModel";
 
 export const getBodyMetrics = query({
-  args: { targetUserId: v.optional(v.id("users")) },
+  args: { 
+    targetUserId: v.optional(v.id("users")), 
+    paginationOpts: paginationOptsValidator,
+  },
   handler: async (ctx, args) => {
     const me = await getAuthenticatedUser(ctx);
     const targetId: Id<"users"> = args.targetUserId ?? me._id;
@@ -15,7 +19,7 @@ export const getBodyMetrics = query({
       .query("bodyMetrics")
       .withIndex("by_user", (q) => q.eq("userId", targetId))
       .order("desc")
-      .collect();
+      .paginate(args.paginationOpts);
   },
 });
 

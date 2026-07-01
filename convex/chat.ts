@@ -42,9 +42,21 @@ export const clearChunks = mutation({
   handler: async (ctx) => {
     const me = await getAuthenticatedUser(ctx);
     if (me.role !== "admin") throw new Error("Admin only.");
-    const chunks = await ctx.db.query("bookKnowledge").take(100);
+    await ctx.scheduler.runAfter(0, internal.chat.clearChunksBatch, {});
+    return { started: true };
+  },
+});
+
+export const clearChunksBatch = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const batchSize = 100;
+    const chunks = await ctx.db.query("bookKnowledge").take(batchSize);
     for (const c of chunks) await ctx.db.delete(c._id);
-    return chunks.length;
+
+    if (chunks.length === batchSize) {
+      await ctx.scheduler.runAfter(0, internal.chat.clearChunksBatch, {});
+    }
   },
 });
 

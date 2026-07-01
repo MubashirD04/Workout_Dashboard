@@ -26,12 +26,51 @@ As our database grows—especially with the introduction of thousands of AI RAG 
 
 ---
 
+## Current State vs Target
+
+**Frontend:** History pages (`WorkoutLog`, `CardioTracker`, `BodyMetrics`, `NutritionTracker`, `ProgressPhotos`) already call `usePaginatedQuery`.
+
+**Backend:** List queries (`getWorkouts`, `getCardioLogs`, `getBodyMetrics`, `getNutritionLogs`, `getProgressPhotos`) still use `.collect()`. These need to be migrated to accept `paginationOpts` and return `.paginate()` results so the frontend paginator works correctly at scale.
+
+---
+
 ## The Pagination Strategy
 
 To mitigate these limits, use Convex's built-in `paginate()` mechanics rather than `.collect()`.
 
-### 1. Backend: Chunking Large Operations
-If you need to process or read a vast number of rows on the backend (e.g. migrating schemas or re-computing stats), you should break the mutation into self-scheduling batches using cursors.
+### 1. Backend: Paginated List Queries
+
+List queries should accept `paginationOpts` and return a paginated result:
+
+```typescript
+import { query } from "./_generated/server";
+import { paginationOptsValidator } from "convex/server";
+import { v } from "convex/values";
+import { getAuthenticatedUser, assertCanReadUserData } from "./lib/auth";
+import type { Id } from "./_generated/dataModel";
+
+export const getWorkouts = query({
+  args: {
+    targetUserId: v.optional(v.id("users")),
+    paginationOpts: paginationOptsValidator,
+  },
+  handler: async (ctx, args) => {
+    const me = await getAuthenticatedUser(ctx);
+    const targetId: Id<"users"> = args.targetUserId ?? me._id;
+    await assertCanReadUserData(ctx, me, targetId, false);
+
+    return await ctx.db
+      .query("workouts")
+      .withIndex("by_user", (q) => q.eq("userId", targetId))
+      .order("desc")
+      .paginate(args.paginationOpts);
+  },
+});
+```
+
+### 2. Backend: Chunking Large Batch Operations
+
+If you need to process or read a vast number of rows on the backend (e.g. migrating schemas or re-computing stats), break the mutation into self-scheduling batches using cursors.
 
 ```typescript
 import { internalMutation } from "./_generated/server";
@@ -41,19 +80,16 @@ import { internal } from "./_generated/api";
 export const batchProcess = internalMutation({
   args: { cursor: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    // 1. Fetch exactly what we can afford to compute in ~200ms
-    const batchSize = 100; 
-    
+    const batchSize = 100;
+
     const results = await ctx.db
       .query("someLargeTable")
       .paginate({ cursor: args.cursor ?? null, numItems: batchSize });
 
-    // 2. Perform work
     for (const doc of results.page) {
-       await ctx.db.patch(doc._id, { processed: true });
+      await ctx.db.patch(doc._id, { processed: true });
     }
 
-    // 3. Self-schedule the next batch if there are more
     if (!results.isDone) {
       await ctx.scheduler.runAfter(0, internal.someFile.batchProcess, {
         cursor: results.continueCursor,
@@ -63,44 +99,47 @@ export const batchProcess = internalMutation({
 });
 ```
 
-### 2. Frontend: Lazy Loading UI
-For rendering lists in the React dashboard (like history tables or timelines), never fetch all user history at once. Utilize `usePaginatedQuery`.
+### 3. Frontend: Lazy Loading UI
+
+For rendering lists in the React dashboard (history tables, timelines), use `usePaginatedQuery` against paginated backend queries:
 
 ```tsx
 import { usePaginatedQuery } from "convex/react";
-import { api } from "../convex/_generated/api";
+import { api } from "../../../convex/_generated/api";
 
 function WorkoutHistory() {
   const { results, status, loadMore } = usePaginatedQuery(
-    api.workouts.getWorkoutHistory,
-    {}, // standard args
-    { initialNumItems: 20 } // React paginator opts
+    api.workouts.getWorkouts,
+    {},
+    { initialNumItems: 10 }
   );
 
   return (
     <div>
-      {/* Map results... */}
+      {results.map((workout) => (
+        <div key={workout._id}>{workout.date}</div>
+      ))}
       {status === "CanLoadMore" && (
-         <button onClick={() => loadMore(20)}>Load More</button>
+        <button onClick={() => loadMore(10)}>Load More</button>
       )}
     </div>
   );
 }
 ```
 
+Trainers viewing a client's data pass `targetUserId` as an additional query arg.
+
 ---
 
 ## Proactive Auditing & Monitoring
 
-While Convex does not offer a free-tier "Storage Quota Percentage" endpoint to query within `schema.ts`, you can run our local audit script to sample document sizes and fetch deep table counts to identify danger zones.
+Use the **Health & Insights** panel in the Convex Deployment Dashboard for real-time analysis of function performance and read patterns.
 
-### Running the Audit Script
-
-Run this command locally to check if our tables are getting near the `32,000` scan limits:
+For local sampling, `scripts/auditLimits.ts` scans table row counts and estimated sizes. It requires `VITE_CONVEX_URL` or `CONVEX_URL` in `.env.local`:
 
 ```bash
 npx tsx scripts/auditLimits.ts
 ```
 
 > [!NOTE]
-> If a table reports `> 10,000 rows`, manually search the codebase for `.collection()` references against that table and upgrade them to use `.paginate()` immediately.
+> If a table reports `> 10,000 rows`, search the codebase for `.collect()` references against that table and upgrade them to use `.paginate()` immediately.
