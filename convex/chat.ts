@@ -29,7 +29,7 @@ export const getConversations = query({
       convos.map(async (c) => {
         const firstMessage = await (ctx.db
           .query("messages") as any)
-          .withIndex("by_creation_time", (q: any) => q.eq("conversationId", c._id))
+          .withIndex("by_conversation_and_time", (q: any) => q.eq("conversationId", c._id))
           .first();
         return { ...c, first_message: firstMessage?.content };
       })
@@ -101,7 +101,7 @@ export const getConversation = query({
     }
     return await (ctx.db
       .query("messages") as any)
-      .withIndex("by_creation_time", (q: any) => q.eq("conversationId", args.id))
+      .withIndex("by_conversation_and_time", (q: any) => q.eq("conversationId", args.id))
       .collect();
   },
 });
@@ -131,7 +131,7 @@ export const deleteConversation = mutation({
 
     const messages = await (ctx.db
       .query("messages") as any)
-      .withIndex("by_creation_time", (q: any) => q.eq("conversationId", args.id))
+      .withIndex("by_conversation_and_time", (q: any) => q.eq("conversationId", args.id))
       .collect();
     for (const msg of messages) await ctx.db.delete(msg._id);
     await ctx.db.delete(args.id);
@@ -263,7 +263,7 @@ export const getConversationHistory = internalQuery({
   handler: async (ctx, args) => {
     const messages = await (ctx.db
       .query("messages") as any)
-      .withIndex("by_creation_time", (q: any) => q.eq("conversationId", args.conversationId))
+      .withIndex("by_conversation_and_time", (q: any) => q.eq("conversationId", args.conversationId))
       .collect();
     return messages.map((m: any) => ({ role: m.role, content: m.content }));
   },

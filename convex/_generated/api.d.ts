@@ -12,8 +12,11 @@ import type * as audit from "../audit.js";
 import type * as bodyMetrics from "../bodyMetrics.js";
 import type * as cardioLogs from "../cardioLogs.js";
 import type * as chat from "../chat.js";
+import type * as inviteCodes from "../inviteCodes.js";
+import type * as lib_auth from "../lib/auth.js";
 import type * as nutritionLogs from "../nutritionLogs.js";
 import type * as progressPhotos from "../progressPhotos.js";
+import type * as users from "../users.js";
 import type * as workouts from "../workouts.js";
 
 import type {
@@ -27,8 +30,11 @@ declare const fullApi: ApiFromModules<{
   bodyMetrics: typeof bodyMetrics;
   cardioLogs: typeof cardioLogs;
   chat: typeof chat;
+  inviteCodes: typeof inviteCodes;
+  "lib/auth": typeof lib_auth;
   nutritionLogs: typeof nutritionLogs;
   progressPhotos: typeof progressPhotos;
+  users: typeof users;
   workouts: typeof workouts;
 }>;
 

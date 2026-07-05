@@ -6,13 +6,17 @@ import {
     Tooltip,
     Legend
 } from 'recharts';
-import { nutritionApi } from '../api/trackingApi';
-import { useFetch } from '../hooks/useFetch';
+import { usePaginatedQuery } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 
 const COLORS = ['#F97316', '#334155', '#94a3b8']; // Orange (Protein), Slate-700 (Carbs), Slate-400 (Fat)
 
 const MacroDonutChart = () => {
-    const { data: logs, loading } = useFetch(nutritionApi.getAll);
+    const { results: logs, status } = usePaginatedQuery(
+        api.nutritionLogs.getNutritionLogs,
+        {},
+        { initialNumItems: 100 }
+    )
 
     const getAverages = () => {
         if (!logs || !Array.isArray(logs) || logs.length === 0) {
@@ -47,7 +51,7 @@ const MacroDonutChart = () => {
             <h3 className="text-xl font-bold mb-4 text-primary text-glow">Macro Distribution</h3>
 
             <div className="w-full h-[80%]">
-                {loading ? (
+                {status ? (
                     <div className="h-full flex items-center justify-center">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                     </div>

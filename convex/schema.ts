@@ -118,7 +118,7 @@ export default defineSchema({
     content: v.string(),
     sources: v.optional(v.array(v.string())),
     created_at: v.number(),
-  }).index("by_creation_time", ["conversationId", "created_at"]),
+  }).index("by_conversation_and_time", ["conversationId", "created_at"]),
 
   bookKnowledge: defineTable({
     book_title: v.string(),
