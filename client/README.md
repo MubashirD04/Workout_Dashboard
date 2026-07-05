@@ -83,4 +83,5 @@ npm install
 
 Styling uses Tailwind CSS v4 with custom theme tokens defined in `src/index.css` via the `@theme` directive. PostCSS config is in `postcss.config.js`.
 
-The app connects directly to Convex (no REST proxy). Legacy wrappers in `src/api/` exist for a few chart components but new code should use Convex React hooks directly.
+The app connects directly to Convex (no REST proxy). `src/api/` contains a deprecated, pre-pagination Convex HTTP wrapper (`apiClient.ts`, `trackingApi.ts`, `workoutApi.ts`, `chatApi.ts`). It predates the backend's `paginationOpts` requirement and will throw validation errors if called — do not use it. All page components use Convex React hooks (`useQuery`, `usePaginatedQuery`, `useMutation`, `useAction`) directly; follow that pattern for anything new.
+

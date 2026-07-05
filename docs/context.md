@@ -62,6 +62,11 @@ The first user to sign in is bootstrapped as admin; subsequent sign-ups default 
 └── README.md
 ```
 
+## Known Frontend Gaps
+
+- `DashboardHome.tsx`'s stat cards and `AthleteRadarChart`, `VolumeLineChart`, and `ConsistencyHeatmap` currently render static/random mock data, not live Convex data. Treat the dashboard home as a visual placeholder, not a functioning summary view.
+- `MacroDonutChart` was migrated off the legacy `src/api/` client onto `usePaginatedQuery(api.nutritionLogs.getNutritionLogs)` — this is the pattern to follow if the other dashboard charts are wired up later.
+- Trainer client-detail view (`ClientsView` → `ClientDetail`) never renders Progress Photos, matching the access rule in `convex/lib/auth.ts`.
 ---
 
 ## Current Architecture
@@ -148,4 +153,4 @@ Book knowledge is loaded offline via `scripts/loadEmbeddings.ts` reading `book_k
 - **Schema Safety**: All tables and fields are strictly typed in `convex/schema.ts`.
 - **Authorization**: Never trust client-supplied identity fields. User name/email/clerkId come from verified JWT claims in `upsertCurrentUser`.
 - **Progress Photos**: Trainers are explicitly blocked from reading client progress photos via `assertCanReadUserData(..., includePhotos: true)`.
-- **Pagination**: History list pages use `usePaginatedQuery` on the frontend; backend list queries still use `.collect()` — see [convex_limits_and_pagination.md](convex_limits_and_pagination.md) for the target pagination pattern.
+- **Pagination**: Both frontend (`usePaginatedQuery`) and backend (`paginationOptsValidator` + `.paginate()`) are fully migrated for `workouts`, `cardioLogs`, `bodyMetrics`, `nutritionLogs`, and `progressPhotos`. The only pagination gap is the legacy `client/src/api/` wrapper layer, which predates this migration and is broken against the current backend — do not use it for new work.

@@ -13,13 +13,14 @@ const COLORS = ['#F97316', '#334155', '#94a3b8']; // Orange (Protein), Slate-700
 
 const MacroDonutChart = () => {
     const { results: logs, status } = usePaginatedQuery(
-        api.nutritionLogs.getNutritionLogs,
+        (api as any).nutritionLogs.getNutritionLogs,
         {},
-        { initialNumItems: 100 }
-    )
+        { initialNumItems: 60 }
+    );
+    const loading = status === "LoadingFirstPage";
 
     const getAverages = () => {
-        if (!logs || !Array.isArray(logs) || logs.length === 0) {
+        if (!logs || logs.length === 0) {
             return [
                 { name: 'Protein', value: 0 },
                 { name: 'Carbs', value: 0 },
@@ -28,7 +29,7 @@ const MacroDonutChart = () => {
         }
 
         const totals = logs.reduce(
-            (acc, log) => ({
+            (acc, log: any) => ({
                 protein: acc.protein + (log.protein || 0),
                 carbs: acc.carbs + (log.carbs || 0),
                 fat: acc.fat + (log.fat || 0),
@@ -51,7 +52,7 @@ const MacroDonutChart = () => {
             <h3 className="text-xl font-bold mb-4 text-primary text-glow">Macro Distribution</h3>
 
             <div className="w-full h-[80%]">
-                {status ? (
+                {loading ? (
                     <div className="h-full flex items-center justify-center">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                     </div>

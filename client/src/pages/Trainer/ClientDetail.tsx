@@ -5,15 +5,10 @@ import WorkoutLog from '../WorkoutLog';
 import CardioTracker from '../CardioTracker';
 import BodyMetrics from '../BodyMetrics';
 import NutritionTracker from '../NutritionTracker';
-import ProgressPhotos from '../ProgressPhotos';
 
 const ClientDetail: React.FC = () => {
     const { clientId } = useParams<{ clientId: string }>();
 
-    
-    // For now, let's just assume we can reuse the tracker components by passing props
-    // This will require updating those components to accept targetUserId
-    
     if (!clientId) return null;
 
     return (
@@ -28,7 +23,7 @@ const ClientDetail: React.FC = () => {
                     <h3 className="text-2xl font-bold text-white mb-4">Workouts</h3>
                     <WorkoutLog targetUserId={clientId as Id<"users">} />
                 </section>
-                
+
                 <section>
                     <h3 className="text-2xl font-bold text-white mb-4">Cardio</h3>
                     <CardioTracker targetUserId={clientId as Id<"users">} />
@@ -43,11 +38,11 @@ const ClientDetail: React.FC = () => {
                     <h3 className="text-2xl font-bold text-white mb-4">Nutrition</h3>
                     <NutritionTracker targetUserId={clientId as Id<"users">} />
                 </section>
-                
-                <section>
-                    <h3 className="text-2xl font-bold text-white mb-4">Progress Photos</h3>
-                    <ProgressPhotos targetUserId={clientId as Id<"users">} />
-                </section>
+
+                {/* Progress Photos intentionally omitted: trainers are never
+                    permitted to view client progress photos (see convex/lib/auth.ts,
+                    convex/progressPhotos.ts). Rendering it here previously threw
+                    "Forbidden: trainers cannot access client progress photos." */}
             </div>
         </div>
     );

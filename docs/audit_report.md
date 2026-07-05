@@ -5,6 +5,7 @@
 **Deployment:** Connected via `VITE_CONVEX_URL` / `CONVEX_URL` from `.env.local`
 
 ---
+> **Update:** Priority 2 (paginate `getWorkouts`/`getCardioLogs`/`getBodyMetrics`/`getNutritionLogs`/`getProgressPhotos`) and the `audit.getTableChunk` local/deployment drift noted in §4 have since been resolved in the codebase. The `bookKnowledge` findings in Priority 1 should still be treated as current until re-audited.
 
 ## Executive Summary
 
