@@ -18,6 +18,8 @@ export const upsertCurrentUser = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
 
+    console.log("IDENTITY DEBUG:", JSON.stringify(identity));
+
     // Use verified identity claims
     const name = identity.name ?? "Unknown";
     const email = identity.email ?? "";

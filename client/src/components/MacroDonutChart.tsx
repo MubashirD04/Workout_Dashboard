@@ -6,18 +6,20 @@ import {
     Tooltip,
     Legend
 } from 'recharts';
-import { usePaginatedQuery } from 'convex/react';
+import { usePaginatedQuery, useConvexAuth } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 
 const COLORS = ['#F97316', '#334155', '#94a3b8']; // Orange (Protein), Slate-700 (Carbs), Slate-400 (Fat)
 
 const MacroDonutChart = () => {
+    const { isAuthenticated } = useConvexAuth();
+
     const { results: logs, status } = usePaginatedQuery(
         (api as any).nutritionLogs.getNutritionLogs,
-        {},
+        isAuthenticated ? {}: "skip",
         { initialNumItems: 60 }
     );
-    const loading = status === "LoadingFirstPage";
+    const loading = !isAuthenticated || status === "LoadingFirstPage";
 
     const getAverages = () => {
         if (!logs || logs.length === 0) {

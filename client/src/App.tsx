@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { SignedIn, SignedOut, RedirectToSignIn } from '@clerk/clerk-react';
 import DashboardLayout from './components/DashboardLayout';
 import WorkoutLog from './pages/WorkoutLog';
 import CardioTracker from './pages/CardioTracker';
@@ -16,21 +17,26 @@ import { UserSync } from './components/UserSync';
 function App() {
   return (
     <Router>
-      <UserSync />
-      <DashboardLayout>
-        <Routes>
-          <Route path="/" element={<DashboardHome />} />
-          <Route path="/workouts" element={<WorkoutLog />} />
-          <Route path="/cardio" element={<CardioTracker />} />
-          <Route path="/metrics" element={<BodyMetrics />} />
-          <Route path="/nutrition" element={<NutritionTracker />} />
-          <Route path="/photos" element={<ProgressPhotos />} />
-          <Route path="/admin" element={<AdminPanel />} />
-          <Route path="/clients" element={<ClientsView />} />
-          <Route path="/clients/:clientId" element={<ClientDetail />} />
-          <Route path="/invite/:code" element={<ClaimInvite />} />
-        </Routes>
-      </DashboardLayout>
+      <SignedIn>
+        <UserSync />
+        <DashboardLayout>
+          <Routes>
+            <Route path="/" element={<DashboardHome />} />
+            <Route path="/workouts" element={<WorkoutLog />} />
+            <Route path="/cardio" element={<CardioTracker />} />
+            <Route path="/metrics" element={<BodyMetrics />} />
+            <Route path="/nutrition" element={<NutritionTracker />} />
+            <Route path="/photos" element={<ProgressPhotos />} />
+            <Route path="/admin" element={<AdminPanel />} />
+            <Route path="/clients" element={<ClientsView />} />
+            <Route path="/clients/:clientId" element={<ClientDetail />} />
+            <Route path="/invite/:code" element={<ClaimInvite />} />
+          </Routes>
+        </DashboardLayout>
+      </SignedIn>
+      <SignedOut>
+        <RedirectToSignIn/>
+      </SignedOut>
     </Router>
   );
 }

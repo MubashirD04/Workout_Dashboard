@@ -1,4 +1,4 @@
-import { StrictMode } from 'react'
+import { StrictMode, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
@@ -8,6 +8,16 @@ console.log('Mounting React application');
 import { ClerkProvider, useAuth } from "@clerk/clerk-react";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { ConvexReactClient } from "convex/react";
+
+function TokenDebug() {
+  const { getToken } = useAuth();
+  useEffect(() => {
+    getToken({ template: "convex" }).then((token) => {
+      console.log("CONVEX JWT:", token);
+    });
+  }, []);
+  return null;
+}
 
 const convexUrl = import.meta.env.VITE_CONVEX_URL || "http://localhost:3210";
 const convex = new ConvexReactClient(convexUrl);
@@ -19,6 +29,7 @@ createRoot(document.getElementById('root')!).render(
     <ClerkProvider publishableKey={clerkPublishableKey}>
       <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
         <App />
+        <TokenDebug/>
       </ConvexProviderWithClerk>
     </ClerkProvider>
   </StrictMode>,

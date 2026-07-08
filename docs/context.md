@@ -96,6 +96,7 @@ The first user to sign in is bootstrapped as admin; subsequent sign-ups default 
 2. `UserSync` component calls `users.upsertCurrentUser` on sign-in to create/update the Convex user record.
 3. All protected Convex functions call `getAuthenticatedUser()` from `convex/lib/auth.ts`.
 4. Role and ownership checks use `assertCanReadUserData` / `assertCanWriteUserData`.
+5. **Route gating**: `App.tsx` wraps all routes in Clerk's `<SignedIn>` / `<SignedOut>` (`<RedirectToSignIn />` on sign-out). This is required, not optional — without it, protected pages mount and fire Convex queries before Clerk has resolved a session, and every `getAuthenticatedUser()` call in `convex/lib/auth.ts` throws `"Unauthenticated: no identity found."` Individual list-page queries also pass `isAuthenticated ? args : "skip"` (via `useConvexAuth()`) as defense-in-depth against the same race on fast reloads/HMR.
 
 ### Database Schema (Convex)
 
