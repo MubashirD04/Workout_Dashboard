@@ -1,14 +1,18 @@
 import React from 'react';
-import { useQuery, useMutation } from "convex/react";
+import { usePaginatedQuery, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 
 const AdminPanel: React.FC = () => {
-    const users = useQuery((api as any).users.listAllUsers);
+    const { results: users, status, loadMore } = usePaginatedQuery(
+        api.users.listAllUsers,
+        {},
+        { initialNumItems: 20 }
+    );
     const setRole = useMutation((api as any).users.setUserRole);
 
-    if (users === undefined) return <div className="text-white">Loading users...</div>;
+    if (status === "LoadingFirstPage") return <div className="text-white">Loading users...</div>;
 
     return (
         <div className="space-y-6">
@@ -23,11 +27,10 @@ const AdminPanel: React.FC = () => {
                         <div>
                             <p className="font-bold text-white">{user.name}</p>
                             <p className="text-sm text-slate-400">{user.email}</p>
-                            <span className={`text-xs px-2 py-1 rounded ${
-                                user.role === 'admin' ? 'bg-red-500/20 text-red-400' :
+                            <span className={`text-xs px-2 py-1 rounded ${user.role === 'admin' ? 'bg-red-500/20 text-red-400' :
                                 user.role === 'trainer' ? 'bg-blue-500/20 text-blue-400' :
-                                'bg-slate-500/20 text-slate-400'
-                            }`}>
+                                    'bg-slate-500/20 text-slate-400'
+                                }`}>
                                 {user.role.toUpperCase()}
                             </span>
                         </div>
@@ -51,6 +54,14 @@ const AdminPanel: React.FC = () => {
                     </Card>
                 ))}
             </div>
+            {status === "CanLoadMore" && (
+                <Button onClick={() => loadMore(20)} variant="secondary" className="w-full">
+                    Load More
+                </Button>
+            )}
+            {status === "LoadingMore" && (
+                <div className="text-center py-4 text-slate-500">Loading more...</div>
+            )}
         </div>
     );
 };

@@ -7,6 +7,7 @@ import {
   requireAdmin,
   requireTrainerOrAdmin,
 } from "./lib/auth";
+import { paginationOptsValidator } from "convex/server";
 
 // ─────────────────────────────────────────────────────────────
 // Called on first sign-in to upsert the user record
@@ -73,11 +74,11 @@ export const getCurrentUser = query({
 // ─────────────────────────────────────────────────────────────
 
 export const listAllUsers = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { paginationOpts: paginationOptsValidator },
+  handler: async (ctx, args) => {
     const me = await getAuthenticatedUser(ctx);
     requireAdmin(me);
-    return await ctx.db.query("users").collect();
+    return await ctx.db.query("users").paginate(args.paginationOpts);
   },
 });
 
@@ -122,8 +123,8 @@ export const setUserRole = mutation({
 // ─────────────────────────────────────────────────────────────
 
 export const getMyClients = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { paginationOpts: paginationOptsValidator },
+  handler: async (ctx, args) => {
     const me = await getAuthenticatedUser(ctx);
     requireTrainerOrAdmin(me);
 
@@ -133,7 +134,7 @@ export const getMyClients = query({
       return await ctx.db
         .query("users")
         .withIndex("by_role", (q) => q.eq("role", "client"))
-        .collect();
+        .paginate(args.paginationOpts);
     }
 
     return await ctx.db

@@ -129,12 +129,23 @@ export const deleteConversation = mutation({
       throw new Error("Forbidden.");
     }
 
-    const messages = await (ctx.db
-      .query("messages") as any)
-      .withIndex("by_conversation_and_time", (q: any) => q.eq("conversationId", args.id))
-      .collect();
-    for (const msg of messages) await ctx.db.delete(msg._id);
     await ctx.db.delete(args.id);
+    await ctx.scheduler.runAfter(0, internal.chat.deleteMessagesBatch, {
+      conversationId: args.id,
+    });
+  },
+});
+
+export const deleteMessagesBatch = internalMutation({
+  args: { conversationId: v.id("conversations") },
+  handler: async (ctx, args) => {
+    const batch = await (ctx.db.query("messages") as any)
+      .withIndex("by_creation_time", (q: any) => q.eq("conversationId", args.conversationId))
+      .take(100);
+    for (const m of batch) await ctx.db.delete(m._id);
+    if (batch.length === 100) {
+      await ctx.scheduler.runAfter(0, internal.chat.deleteMessagesBatch, args);
+    }
   },
 });
 
@@ -189,12 +200,12 @@ export const validateActionAccess = internalQuery({
       }
       return { userId: args.targetUserId };
     }
-    
+
     // Client
     if (user._id !== args.targetUserId) {
       throw new Error("Forbidden: you can only access your own data.");
     }
-    
+
     return { userId: args.targetUserId };
   },
 });
@@ -333,7 +344,7 @@ export const askQuestion = action({
         conversationId: args.conversationId,
       });
       historyContext = history
-        .slice(-4)
+        .order("desc").take(8)
         .map((msg: any) => `${msg.role === "user" ? "User" : "Assistant"}: ${msg.content}`)
         .join("\n");
     }
@@ -344,8 +355,8 @@ export const askQuestion = action({
 
     // SECURITY: Sanitize fitness context to prevent prompt injection from user notes
     const sanitizedFitnessSummary = fitnessContext.summary
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
 
     const systemMessage = `You are an expert AI fitness and nutrition coach with access to professional fitness books and the user's personal fitness data.
 
