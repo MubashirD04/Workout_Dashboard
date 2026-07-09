@@ -140,7 +140,7 @@ export const getMyClients = query({
     return await ctx.db
       .query("users")
       .withIndex("by_trainer", (q) => q.eq("trainerId", me._id))
-      .collect();
+      .paginate(args.paginationOpts);
   },
 });
 

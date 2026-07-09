@@ -10,7 +10,7 @@ const AdminPanel: React.FC = () => {
         {},
         { initialNumItems: 20 }
     );
-    const setRole = useMutation((api as any).users.setUserRole);
+    const setRole = useMutation(api.users.setUserRole);
 
     if (status === "LoadingFirstPage") return <div className="text-white">Loading users...</div>;
 
