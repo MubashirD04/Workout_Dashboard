@@ -57,7 +57,8 @@ The first user to sign in is bootstrapped as admin; subsequent sign-ups default 
 ├── docs/
 │   ├── brief.md
 │   ├── context.md
-│   └── convex_limits_and_pagination.md
+│   ├── convex_limits_and_pagination.md
+│   └── audit_report.md
 ├── package.json            # Root dependencies (Convex, Clerk, HF inference)
 └── README.md
 ```
@@ -154,4 +155,5 @@ Book knowledge is loaded offline via `scripts/loadEmbeddings.ts` reading `book_k
 - **Schema Safety**: All tables and fields are strictly typed in `convex/schema.ts`.
 - **Authorization**: Never trust client-supplied identity fields. User name/email/clerkId come from verified JWT claims in `upsertCurrentUser`.
 - **Progress Photos**: Trainers are explicitly blocked from reading client progress photos via `assertCanReadUserData(..., includePhotos: true)`.
-- **Pagination**: Both frontend (`usePaginatedQuery`) and backend (`paginationOptsValidator` + `.paginate()`) are fully migrated for `workouts`, `cardioLogs`, `bodyMetrics`, `nutritionLogs`, and `progressPhotos`. The only pagination gap is the legacy `client/src/api/` wrapper layer, which predates this migration and is broken against the current backend — do not use it for new work.
+- **Pagination**: Both frontend (`usePaginatedQuery`) and backend (`paginationOptsValidator` + `.paginate()`) are fully migrated for all main lists, including user activities (`workouts`, `cardioLogs`, `bodyMetrics`, `nutritionLogs`, `progressPhotos`) and user lists (`users.listAllUsers`, `users.getMyClients`). The only pagination gap is the legacy `client/src/api/` wrapper layer, which predates this migration and is broken against the current backend — do not use it for new work.
+- **Batched Deletes**: To prevent Convex transaction execution limit errors (1-second timeouts) when deleting database relationships with potentially many records (e.g. deleting messages associated with a conversation), use self-scheduling background recursive mutations (e.g. `deleteMessagesBatch`) that process items in chunks (e.g., `.take(100)`).
