@@ -20,7 +20,19 @@ async function main() {
   console.log(" Running Convex Limits Audit...");
   console.log("=================================================");
 
-  const tables = ["bookKnowledge", "workouts", "cardioLogs", "bodyMetrics", "nutritionLogs"];
+  const tables = [
+    "users",
+    "inviteCodes",
+    "workouts",
+    "cardioLogs",
+    "bodyMetrics",
+    "nutritionLogs",
+    "progressPhotos",
+    "conversations",
+    "messages",
+    "bookKnowledge",
+    "auditLogs"
+  ];
   const SCAN_LIMIT = 32000;
   const RETURN_LIMIT_BYTES = 16 * 1024 * 1024; // 16 MiB
 
@@ -34,17 +46,20 @@ async function main() {
     let error = null;
 
     process.stdout.write("  Scanning... ");
-    
+
     try {
       while (!isDone) {
         const result: any = await client.query(api.audit.getTableChunk, {
           table,
-          cursor,
-          numItems: 1000,
+          paginationOpts: {
+            cursor,
+            numItems: 1000,
+          },
+          bypassKey: process.env.AUDIT_BYPASS_KEY,
         });
 
         totalCount += result.count;
-        totalBytes += result.bytes;
+        totalBytes += result.totalBytes;
         cursor = result.continueCursor;
         isDone = result.isDone;
         

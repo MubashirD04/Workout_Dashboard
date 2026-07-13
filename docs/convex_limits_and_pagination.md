@@ -24,13 +24,11 @@ As our database grows—especially with the introduction of thousands of AI RAG 
 
 *(Note: Background **Actions** can run for up to 10 minutes, but cannot directly read or write to the database. They must rely on sub-queries and sub-mutations that still adhere to the 1-second limits.)*
 
----
-
 ## Current State
 
-**Frontend:** History pages (`WorkoutLog`, `CardioTracker`, `BodyMetrics`, `NutritionTracker`, `ProgressPhotos`) call `usePaginatedQuery` against the paginated backend queries below.
+**Frontend:** History pages (`WorkoutLog`, `CardioTracker`, `BodyMetrics`, `NutritionTracker`, `ProgressPhotos`) and admin/trainer views (`AdminPanel`, `ClientsView`) call `usePaginatedQuery` against the paginated backend queries below.
 
-**Backend:** `getWorkouts`, `getCardioLogs`, `getBodyMetrics`, `getNutritionLogs`, and `getProgressPhotos` all accept `paginationOpts` and return `.paginate()` results. The migration described in earlier drafts of this doc is complete — there is no remaining `.collect()` usage on these list queries.
+**Backend:** `getWorkouts`, `getCardioLogs`, `getBodyMetrics`, `getNutritionLogs`, `getProgressPhotos`, `listAllUsers`, and `getMyClients` all accept `paginationOpts` and return `.paginate()` results. The migration of these core listing queries is fully complete, eliminating unbounded `.collect()` usage.
 
 **Known gap:** `client/src/api/` (`apiClient.ts`, `trackingApi.ts`, `workoutApi.ts`, `chatApi.ts`) is a legacy, pre-pagination wrapper layer that calls these functions by string name without `paginationOpts`. It no longer works against the current backend contract and should not be used — use the Convex React hooks (`useQuery`/`usePaginatedQuery`/`useMutation`/`useAction`) directly, as every current page component does except where noted below. This legacy layer is a deletion candidate.
 ---
