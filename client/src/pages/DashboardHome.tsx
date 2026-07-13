@@ -1,51 +1,83 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { usePaginatedQuery, useConvexAuth } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
+import { calculateWorkoutVolume } from '../utils/calculationUtils';
 import AthleteRadarChart from '../components/AthleteRadarChart';
 import VolumeLineChart from '../components/VolumeLineChart';
 import MacroDonutChart from '../components/MacroDonutChart';
 import ConsistencyHeatmap from '../components/ConsistencyHeatmap';
 import { Card } from '../components/ui/Card';
 
+function startOfWeek(d: Date) {
+    const date = new Date(d);
+    const day = date.getDay(); // 0 = Sun ... 6 = Sat
+    const diff = (day === 0 ? -6 : 1) - day; // shift back to Monday
+    date.setDate(date.getDate() + diff);
+    date.setHours(0, 0, 0, 0);
+    return date;
+}
+
 const DashboardHome: React.FC = () => {
+    const { isAuthenticated } = useConvexAuth();
+
+    const { results: rawWorkouts } = usePaginatedQuery(
+        (api as any).workouts.getWorkouts,
+        isAuthenticated ? {} : 'skip',
+        { initialNumItems: 100 }
+    );
+    const workouts = rawWorkouts || [];
+
+    const { currentWeekVolume, weekOverWeekChange } = useMemo(() => {
+        const now = new Date();
+        const currentStart = startOfWeek(now);
+        const previousStart = new Date(currentStart);
+        previousStart.setDate(previousStart.getDate() - 7);
+
+        let current = 0;
+        let previous = 0;
+
+        workouts.forEach((w: any) => {
+            const wDate = new Date(w.date);
+            const vol = calculateWorkoutVolume(w.exercises);
+            if (wDate >= currentStart) {
+                current += vol;
+            } else if (wDate >= previousStart) {
+                previous += vol;
+            }
+        });
+
+        let change: number | null = null;
+        if (previous > 0) {
+            change = ((current - previous) / previous) * 100;
+        } else if (current > 0) {
+            change = 100;
+        }
+
+        return { currentWeekVolume: current, weekOverWeekChange: change };
+    }, [workouts]);
+
     return (
         <div className="space-y-6">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-                <div>
-                    <h2 className="text-3xl font-bold text-white">Welcome back, Mike</h2>
-                    <p className="text-slate-400 mt-1">Here's your performance overview for today.</p>
-                </div>
+            {/* Streak + Volume */}
+            <div className="flex justify-end">
                 <div className="flex gap-3">
                     <Card className="px-4 py-2 flex flex-col">
                         <span className="text-xs text-slate-400 uppercase tracking-wider">Streak</span>
                         <span className="text-xl font-bold text-primary text-glow">12 Days</span>
                     </Card>
                     <Card className="px-4 py-2 flex flex-col">
-                        <span className="text-xs text-slate-400 uppercase tracking-wider">Volume</span>
-                        <span className="text-xl font-bold text-white">42,500 kg</span>
+                        <span className="text-xs text-slate-400 uppercase tracking-wider">Volume (This Week)</span>
+                        <span className="text-xl font-bold text-white">{currentWeekVolume.toLocaleString()} kg</span>
+                        {weekOverWeekChange !== null && (
+                            <span className={`text-xs font-bold ${weekOverWeekChange >= 0 ? 'text-green-400' : 'text-primary'}`}>
+                                {weekOverWeekChange >= 0 ? '+' : ''}{weekOverWeekChange.toFixed(1)}% vs last week
+                            </span>
+                        )}
                     </Card>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {/* Row 1: Key Metrics & Radar */}
-                <div className="lg:col-span-1">
-                    <AthleteRadarChart />
-                </div>
-
-                <div className="lg:col-span-2">
-                    <VolumeLineChart />
-                </div>
-
-                {/* Row 2: Macros & Heatmap */}
-                <div className="lg:col-span-1">
-                    <MacroDonutChart />
-                </div>
-
-                <div className="lg:col-span-2 min-h-[300px]">
-                    <ConsistencyHeatmap />
-                </div>
-            </div>
-
-            {/* Quick Stats Row */}
+            {/* Quick Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[
                     { label: 'One Rep Max (Bench)', value: '145 kg', change: '+2.5%' },
@@ -63,6 +95,21 @@ const DashboardHome: React.FC = () => {
                         </div>
                     </Card>
                 ))}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-1">
+                    <AthleteRadarChart />
+                </div>
+                <div className="lg:col-span-2">
+                    <VolumeLineChart />
+                </div>
+                <div className="lg:col-span-1">
+                    <MacroDonutChart />
+                </div>
+                <div className="lg:col-span-2 min-h-[300px]">
+                    <ConsistencyHeatmap />
+                </div>
             </div>
         </div>
     );

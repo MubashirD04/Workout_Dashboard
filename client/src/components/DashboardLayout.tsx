@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import FloatingChat from './FloatingChat';
 import { UserButton } from "@clerk/clerk-react";
@@ -101,6 +101,7 @@ const PAGE_META: Record<string, { section: string; title: string; blurb: string 
     '/photos': { section: 'Fitness', title: 'Progress photos', blurb: 'A visual timeline of your progress' },
     '/clients': { section: 'Team', title: 'Clients', blurb: 'Manage assigned clients and invites' },
     '/admin': { section: 'System', title: 'Admin panel', blurb: 'Users, roles and permissions' },
+    '/profile': { section: 'Account', title: 'Profile', blurb: 'Your account details and settings' },
 };
 
 function getPageMeta(pathname: string) {
@@ -118,11 +119,25 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     const location = useLocation();
     const { user, isAdmin, canViewClients } = useCurrentUser();
     const [mobileNavOpen, setMobileNavOpen] = useState(false);
+    const [profileOpen, setProfileOpen] = useState(false);
+    const profileRef = useRef<HTMLDivElement>(null);
 
     // Close the mobile drawer automatically whenever the route changes.
     useEffect(() => {
         setMobileNavOpen(false);
+        setProfileOpen(false);
     }, [location.pathname]);
+
+    useEffect(() => {
+        if (!profileOpen) return;
+        const handleClick = (e: MouseEvent) => {
+            if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+                setProfileOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, [profileOpen]);
 
     const navItems: NavItem[] = [
         { path: '/', label: 'Overview', icon: 'overview' },
@@ -157,11 +172,10 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                 />
             )}
 
-            {/* Sidebar */}
+            {/* Sidebar — full-height panel flush against the edge, not a floating card */}
             <aside
-                className={`fixed z-50 top-3 bottom-3 left-3 w-64 flex flex-col glass-card transition-transform duration-300 ease-in-out lg:translate-x-0 ${
-                    mobileNavOpen ? 'translate-x-0' : '-translate-x-[calc(100%_+_0.75rem)]'
-                }`}
+                className={`fixed z-50 top-0 bottom-0 left-0 w-56 flex flex-col bg-slate-900/95 backdrop-blur-lg border-r border-white/10 transition-transform duration-300 ease-in-out lg:translate-x-0 ${mobileNavOpen ? 'translate-x-0' : '-translate-x-full'
+                    }`}
             >
                 {/* Brand */}
                 <div className="flex items-center gap-3 px-5 pt-6 pb-5">
@@ -185,16 +199,14 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                                 key={item.path}
                                 to={item.path}
                                 aria-current={active ? 'page' : undefined}
-                                className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                                    active
-                                        ? 'bg-primary text-white shadow-glow'
-                                        : 'text-slate-400 hover:text-white hover:bg-white/5'
-                                }`}
+                                className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 outline-none focus:outline-none ${active
+                                    ? 'bg-primary text-white shadow-glow'
+                                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                                    }`}
                             >
                                 <span
-                                    className={`flex items-center justify-center shrink-0 transition-colors ${
-                                        active ? 'text-white' : 'text-slate-500 group-hover:text-primary'
-                                    }`}
+                                    className={`flex items-center justify-center shrink-0 transition-colors ${active ? 'text-white' : 'text-slate-500 group-hover:text-primary'
+                                        }`}
                                 >
                                     <NavIcon icon={item.icon} />
                                 </span>
@@ -207,51 +219,96 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                 <div className="h-px bg-white/5 mx-5" />
 
                 {/* User card */}
-                <div className="p-4">
-                    <div className="flex items-center gap-3 rounded-xl bg-white/5 px-3 py-2.5">
+                {/* User card + quick-glance profile popover */}
+                <div className="p-4 relative" ref={profileRef}>
+                    <div className="flex items-center gap-2 rounded-xl bg-white/5 px-3 py-2.5">
                         <UserButton afterSignOutUrl="/" />
-                        <div className="min-w-0 leading-tight">
-                            <p className="text-xs font-bold text-white truncate">{user?.name ?? 'Loading…'}</p>
-                            <p className="text-[10px] font-bold text-primary uppercase tracking-widest truncate">{user?.role ?? '—'}</p>
-                        </div>
+                        <button
+                            onClick={() => setProfileOpen((o) => !o)}
+                            className="flex-1 min-w-0 flex items-center justify-between gap-2 text-left outline-none focus:outline-none"
+                            aria-expanded={profileOpen}
+                            aria-label="Toggle profile details"
+                        >
+                            <span className="min-w-0 leading-tight">
+                                <p className="text-xs font-bold text-white truncate">{user?.name ?? 'Loading…'}</p>
+                                <p className="text-[10px] font-bold text-primary uppercase tracking-widest truncate">{user?.role ?? '—'}</p>
+                            </span>
+                            <svg
+                                className={`w-3.5 h-3.5 text-slate-500 shrink-0 transition-transform duration-200 ${profileOpen ? 'rotate-180' : ''}`}
+                                fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}
+                            >
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+                            </svg>
+                        </button>
                     </div>
+
+                    {profileOpen && (
+                        <div className="absolute bottom-full left-0 right-0 mb-2 rounded-xl bg-slate-900 border border-white/10 shadow-2xl p-4 space-y-3">
+                            <div>
+                                <p className="text-sm font-bold text-white truncate">{user?.name ?? '—'}</p>
+                                <p className="text-xs text-slate-400 truncate">{user?.email ?? '—'}</p>
+                            </div>
+                            <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest">
+                                <span className="text-slate-500">Role</span>
+                                <span className="text-primary">{user?.role ?? '—'}</span>
+                            </div>
+                            {user?.createdAt && (
+                                <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest">
+                                    <span className="text-slate-500">Member Since</span>
+                                    <span className="text-slate-300">
+                                        {new Date(user.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                    </span>
+                                </div>
+                            )}
+                            <Link
+                                to="/profile"
+                                onClick={() => setProfileOpen(false)}
+                                className="flex items-center justify-center gap-1.5 mt-2 py-2 rounded-lg bg-primary/10 text-primary text-xs font-bold uppercase tracking-wider hover:bg-primary/20 transition-colors"
+                            >
+                                View Full Profile
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                                </svg>
+                            </Link>
+                        </div>
+                    )}
                 </div>
             </aside>
 
-            {/* Content column — offset to clear the fixed sidebar on large screens */}
-            <div className="lg:pl-[17.5rem]">
-                {/* Topbar: breadcrumb + current page title, like both reference dashboards */}
-                <header className="sticky top-0 z-30 px-4 sm:px-6 lg:px-8 pt-3">
-                    <div className="glass-card px-4 sm:px-6 py-4 flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-3 min-w-0">
-                            <button
-                                onClick={() => setMobileNavOpen(true)}
-                                className="lg:hidden p-2 -ml-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-colors shrink-0"
-                                aria-label="Open navigation"
-                            >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                                </svg>
-                            </button>
-                            <div className="min-w-0">
-                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest truncate">
-                                    {meta.section}
-                                    <span className="text-slate-700 mx-1.5">/</span>
-                                    <span className="text-primary">{meta.title}</span>
-                                </p>
-                                <h1 className="text-lg sm:text-xl font-bold text-white truncate">{meta.title}</h1>
-                            </div>
-                        </div>
-                        <p className="hidden md:block text-xs text-slate-500 font-medium truncate max-w-xs text-right">
-                            {meta.blurb}
+            {/* Topbar — offset to start after the full-height sidebar on desktop */}
+            <header className="fixed top-3 left-3 right-3 z-30 lg:left-[15rem]">
+                <div className="glass-card px-4 sm:px-6 py-4 relative flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <button
+                            onClick={() => setMobileNavOpen(true)}
+                            className="lg:hidden p-2 -ml-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-colors shrink-0 outline-none focus:outline-none"
+                            aria-label="Open navigation"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                        </button>
+                        <p className="hidden sm:block text-[10px] font-bold text-slate-500 uppercase tracking-widest truncate">
+                            {meta.section}
+                            <span className="text-slate-700 mx-1.5">/</span>
+                            <span className="text-primary">{meta.title}</span>
                         </p>
                     </div>
-                </header>
 
-                <main className="px-4 sm:px-6 lg:px-8 py-6">
-                    {children}
-                </main>
-            </div>
+                    <h1 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-lg sm:text-xl font-bold text-white whitespace-nowrap">
+                        Welcome back, {user?.name?.split(' ')[0] ?? 'there'}
+                    </h1>
+
+                    <p className="hidden md:block text-xs text-slate-500 font-medium truncate max-w-xs text-right ml-auto">
+                        {meta.blurb}
+                    </p>
+                </div>
+            </header>
+
+            {/* Main content — insets match the header's box so cards line up under it */}
+            <main className="pt-28 pb-6 px-3 lg:pl-[15rem] lg:pr-3">
+                {children}
+            </main>
 
             <FloatingChat />
         </div>

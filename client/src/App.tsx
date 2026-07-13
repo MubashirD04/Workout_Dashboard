@@ -11,6 +11,7 @@ import AdminPanel from './pages/Admin/AdminPanel';
 import ClientsView from './pages/Trainer/ClientsView';
 import ClientDetail from './pages/Trainer/ClientDetail';
 import ClaimInvite from './pages/Auth/ClaimInvite';
+import Profile from './pages/Profile';
 
 import { UserSync } from './components/UserSync';
 
@@ -31,6 +32,7 @@ function App() {
             <Route path="/clients" element={<ClientsView />} />
             <Route path="/clients/:clientId" element={<ClientDetail />} />
             <Route path="/invite/:code" element={<ClaimInvite />} />
+            <Route path="/profile" element={<Profile />} />
           </Routes>
         </DashboardLayout>
       </SignedIn>

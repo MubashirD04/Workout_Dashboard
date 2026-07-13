@@ -9,12 +9,12 @@ import {
 } from 'recharts';
 
 const data = [
-    { subject: 'Power', A: 120, fullMark: 150 },
-    { subject: 'Speed', A: 98, fullMark: 150 },
-    { subject: 'Cardio', A: 86, fullMark: 150 },
-    { subject: 'Endurance', A: 99, fullMark: 150 },
-    { subject: 'Flexibility', A: 85, fullMark: 150 },
-    { subject: 'Effectiveness', A: 65, fullMark: 150 },
+    { subject: 'Power', A: 90, fullMark: 100 },
+    { subject: 'Speed', A: 85, fullMark: 100 },
+    { subject: 'Cardio', A: 80, fullMark: 100 },
+    { subject: 'Endurance', A: 95, fullMark: 100 },
+    { subject: 'Flexibility', A: 70, fullMark: 100 },
+    { subject: 'Effectiveness', A: 65, fullMark: 100 },
 ];
 
 const AthleteRadarChart = () => {
@@ -25,7 +25,7 @@ const AthleteRadarChart = () => {
                 <RadarChart cx="50%" cy="50%" outerRadius="85%" data={data}>
                     <PolarGrid stroke="#334155" />
                     <PolarAngleAxis dataKey="subject" tick={{ fill: '#94a3b8', fontSize: 12 }} />
-                    <PolarRadiusAxis angle={30} domain={[0, 150]} tick={false} axisLine={false} />
+                    <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
                     <Radar
                         name="Mike"
                         dataKey="A"
