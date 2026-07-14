@@ -67,11 +67,7 @@ const Profile: React.FC = () => {
                                 border: 'none',
                                 width: '100%',
                             },
-                            navbar: {
-                                backgroundColor: 'transparent',
-                                boxShadow: 'none',
-                                border: 'none',
-                            },
+                            
                             navbarMobileMenuRow: {
                                 backgroundColor: 'transparent',
                                 boxShadow: 'none',
@@ -80,16 +76,6 @@ const Profile: React.FC = () => {
                                 backgroundColor: 'transparent',
                                 boxShadow: 'none',
                                 border: 'none',
-                            },
-                            pageScrollBox: {
-                                backgroundColor: 'transparent',
-                            },
-                            profileSection: {
-                                boxShadow: 'none',
-                                border: 'none',
-                            },
-                            profileSectionContent: {
-                                backgroundColor: 'transparent',
                             },
                         },
                     }}

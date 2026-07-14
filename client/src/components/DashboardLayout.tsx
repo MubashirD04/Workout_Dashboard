@@ -277,7 +277,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 
             {/* Topbar — offset to start after the full-height sidebar on desktop */}
             <header className="fixed top-3 left-3 right-3 z-30 lg:left-[15rem]">
-                <div className="glass-card px-4 sm:px-6 py-4 relative flex items-center justify-between gap-4">
+                <div className="glass-card px-4 sm:px-6 py-6 sm:py-7 relative flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3 min-w-0">
                         <button
                             onClick={() => setMobileNavOpen(true)}
