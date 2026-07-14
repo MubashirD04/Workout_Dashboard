@@ -5,7 +5,7 @@ import { calculateWorkoutVolume } from '../utils/calculationUtils';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
-import { usePaginatedQuery, useMutation } from "convex/react";
+import { usePaginatedQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 
@@ -31,10 +31,11 @@ interface WorkoutLogProps {
 }
 
 const WorkoutLog: React.FC<WorkoutLogProps> = ({ targetUserId }) => {
+    const { isAuthenticated } = useConvexAuth();
     const queryArgs = targetUserId ? { targetUserId } : {};
     const { results: rawWorkouts, status, loadMore } = usePaginatedQuery(
         (api as any).workouts.getWorkouts,
-        queryArgs,
+        isAuthenticated ? queryArgs: "skip",
         { initialNumItems: 10 }
     );
 

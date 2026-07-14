@@ -13,7 +13,7 @@ import { getCurrentDate } from '../utils/dateUtils';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
-import { usePaginatedQuery, useMutation } from "convex/react";
+import { usePaginatedQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 
@@ -36,10 +36,11 @@ interface BodyMetricsProps {
 }
 
 const BodyMetrics: React.FC<BodyMetricsProps> = ({ targetUserId }) => {
+    const { isAuthenticated } = useConvexAuth();
     const queryArgs = targetUserId ? { targetUserId } : {};
     const { results: rawMetrics, status, loadMore } = usePaginatedQuery(
         (api as any).bodyMetrics.getBodyMetrics,
-        queryArgs,
+        isAuthenticated ? queryArgs: "skip",
         { initialNumItems: 50 } // Fetch more for the chart
     );
     

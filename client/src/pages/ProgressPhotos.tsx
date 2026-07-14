@@ -3,7 +3,7 @@ import { getCurrentDate, formatDate } from '../utils/dateUtils';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
-import { usePaginatedQuery, useMutation } from "convex/react";
+import { usePaginatedQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 
@@ -20,10 +20,11 @@ interface ProgressPhotosProps {
 }
 
 const ProgressPhotos: React.FC<ProgressPhotosProps> = ({ targetUserId }) => {
+    const { isAuthenticated } = useConvexAuth();
     const queryArgs = targetUserId ? { targetUserId } : {};
     const { results: rawLogs, status, loadMore } = usePaginatedQuery(
         (api as any).progressPhotos.getProgressPhotos,
-        queryArgs,
+        isAuthenticated ? queryArgs: "skip",
         { initialNumItems: 6 }
     );
     const logs = (rawLogs || []).map(l => ({ ...l, id: l._id })) as PhotoLog[];

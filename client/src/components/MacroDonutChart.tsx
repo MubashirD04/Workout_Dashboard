@@ -9,14 +9,14 @@ import {
 import { usePaginatedQuery, useConvexAuth } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 
-const COLORS = ['#F97316', '#334155', '#94a3b8']; // Orange (Protein), Slate-700 (Carbs), Slate-400 (Fat)
+const COLORS = ['#C1754A', '#334155', '#64748b']; // Protein, Carbs, Fat
 
 const MacroDonutChart = () => {
     const { isAuthenticated } = useConvexAuth();
 
     const { results: logs, status } = usePaginatedQuery(
         (api as any).nutritionLogs.getNutritionLogs,
-        isAuthenticated ? {}: "skip",
+        isAuthenticated ? {} : "skip",
         { initialNumItems: 60 }
     );
     const loading = !isAuthenticated || status === "LoadingFirstPage";
@@ -50,18 +50,17 @@ const MacroDonutChart = () => {
     const hasData = chartData.some(d => d.value > 0);
 
     return (
-        <div className="w-full h-[300px] glass-card p-4 flex flex-col items-center">
-            <h3 className="text-xl font-bold mb-4 text-primary text-glow">Macro Distribution</h3>
+        <div className="w-full h-[300px] glass-card p-6 flex flex-col">
+            <p className="eyebrow mb-4">Macro Distribution</p>
 
-            <div className="w-full h-[80%]">
+            <div className="w-full flex-1">
                 {loading ? (
                     <div className="h-full flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary/60"></div>
                     </div>
                 ) : !hasData ? (
-                    <div className="h-full flex flex-col items-center justify-center text-slate-500 text-sm">
-                        <span className="text-2xl mb-2">📊</span>
-                        <p className="italic">No nutrition data available</p>
+                    <div className="h-full flex flex-col items-center justify-center text-slate-600 text-xs">
+                        <p className="italic">No nutrition data yet</p>
                     </div>
                 ) : (
                     <ResponsiveContainer width="100%" height="100%">
@@ -70,29 +69,30 @@ const MacroDonutChart = () => {
                                 data={chartData}
                                 cx="50%"
                                 cy="58%"
-                                innerRadius={60}
+                                innerRadius={68}
                                 outerRadius={80}
-                                fill="#8884d8"
-                                paddingAngle={5}
+                                paddingAngle={4}
                                 dataKey="value"
                                 stroke="none"
                                 label={({ value }) => `${value}g`}
+                                labelLine={false}
                             >
                                 {chartData.map((_, index) => (
                                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                 ))}
                             </Pie>
                             <Tooltip
-                                contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc', borderRadius: '8px' }}
-                                itemStyle={{ color: '#F97316' }}
+                                contentStyle={{ backgroundColor: '#0d1117', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', color: '#e2e8f0' }}
+                                itemStyle={{ color: '#C1754A' }}
                                 formatter={(value) => [`${value}g (avg)`, '']}
                             />
                             <Legend
                                 verticalAlign="bottom"
-                                height={36}
+                                height={30}
                                 iconType="circle"
-                                wrapperStyle={{ paddingTop: '25px' }}
-                                formatter={(value) => <span className="text-slate-400 text-xs font-bold uppercase tracking-wider">{value}</span>}
+                                iconSize={7}
+                                wrapperStyle={{ paddingTop: '18px' }}
+                                formatter={(value) => <span className="text-slate-500 text-[10px] font-semibold uppercase tracking-widest">{value}</span>}
                             />
                         </PieChart>
                     </ResponsiveContainer>

@@ -2,22 +2,23 @@ import React, { useMemo } from 'react';
 import { usePaginatedQuery, useConvexAuth } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { calculateWorkoutVolume } from '../utils/calculationUtils';
+import { parseDateOnly, startOfWeek } from '../utils/dateUtils';
 import AthleteRadarChart from '../components/AthleteRadarChart';
 import VolumeLineChart from '../components/VolumeLineChart';
 import MacroDonutChart from '../components/MacroDonutChart';
 import ConsistencyHeatmap from '../components/ConsistencyHeatmap';
 import { Card } from '../components/ui/Card';
+import { useCurrentUser } from '../hooks/useCurrentUser';
 
-function startOfWeek(d: Date) {
-    const date = new Date(d);
-    const day = date.getDay(); // 0 = Sun ... 6 = Sat
-    const diff = (day === 0 ? -6 : 1) - day; // shift back to Monday
-    date.setDate(date.getDate() + diff);
-    date.setHours(0, 0, 0, 0);
-    return date;
-}
+const quickStats = [
+    { label: 'One Rep Max (Bench)', value: '145', unit: 'kg', change: '+2.5%', positive: true },
+    { label: 'Avg Heart Rate', value: '135', unit: 'bpm', change: '-1.2%', positive: true },
+    { label: 'Sleep Quality', value: '88', unit: '%', change: '+5.0%', positive: true },
+    { label: 'Body Fat', value: '12.4', unit: '%', change: '-0.4%', positive: true },
+];
 
 const DashboardHome: React.FC = () => {
+    const { user } = useCurrentUser();
     const { isAuthenticated } = useConvexAuth();
 
     const { results: rawWorkouts } = usePaginatedQuery(
@@ -37,7 +38,8 @@ const DashboardHome: React.FC = () => {
         let previous = 0;
 
         workouts.forEach((w: any) => {
-            const wDate = new Date(w.date);
+            if (!w.date) return;
+            const wDate = parseDateOnly(w.date);
             const vol = calculateWorkoutVolume(w.exercises);
             if (wDate >= currentStart) {
                 current += vol;
@@ -57,19 +59,28 @@ const DashboardHome: React.FC = () => {
     }, [workouts]);
 
     return (
-        <div className="space-y-6">
-            {/* Streak + Volume */}
-            <div className="flex justify-end">
+        <div className="space-y-8">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                <div>
+                    <h2 className="text-3xl font-normal text-white">
+                        Welcome back, <span className="font-serif italic text-white/90">{user?.name?.split(' ')[0] ?? 'there'}</span>
+                    </h2>
+                    <p className="text-slate-500 mt-1.5 text-sm">Here's your performance overview for today.</p>
+                </div>
                 <div className="flex gap-3">
-                    <Card className="px-4 py-2 flex flex-col">
-                        <span className="text-xs text-slate-400 uppercase tracking-wider">Streak</span>
-                        <span className="text-xl font-bold text-primary text-glow">12 Days</span>
+                    <Card className="px-5 py-3 flex flex-col gap-1 min-w-[112px]">
+                        <span className="eyebrow">Streak</span>
+                        <span className="text-xl font-semibold text-white/90">
+                            12 <span className="text-sm font-normal text-slate-500">days</span>
+                        </span>
                     </Card>
-                    <Card className="px-4 py-2 flex flex-col">
-                        <span className="text-xs text-slate-400 uppercase tracking-wider">Volume (This Week)</span>
-                        <span className="text-xl font-bold text-white">{currentWeekVolume.toLocaleString()} kg</span>
+                    <Card className="px-5 py-3 flex flex-col gap-1 min-w-[140px]">
+                        <span className="eyebrow">Volume (Week)</span>
+                        <span className="text-xl font-semibold text-white/90">
+                            {currentWeekVolume.toLocaleString()} <span className="text-sm font-normal text-slate-500">kg</span>
+                        </span>
                         {weekOverWeekChange !== null && (
-                            <span className={`text-xs font-bold ${weekOverWeekChange >= 0 ? 'text-green-400' : 'text-primary'}`}>
+                            <span className={`text-[11px] font-medium ${weekOverWeekChange >= 0 ? 'text-emerald-400/80' : 'text-rose-400/70'}`}>
                                 {weekOverWeekChange >= 0 ? '+' : ''}{weekOverWeekChange.toFixed(1)}% vs last week
                             </span>
                         )}
@@ -77,39 +88,36 @@ const DashboardHome: React.FC = () => {
                 </div>
             </div>
 
-            {/* Quick Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {[
-                    { label: 'One Rep Max (Bench)', value: '145 kg', change: '+2.5%' },
-                    { label: 'Avg Heart Rate', value: '135 bpm', change: '-1.2%' },
-                    { label: 'Sleep Quality', value: '88%', change: '+5.0%' },
-                    { label: 'Body Fat', value: '12.4%', change: '-0.4%' },
-                ].map((stat, i) => (
-                    <Card key={i} className="p-4 hover:bg-white/5 transition-colors">
-                        <p className="text-xs text-slate-400 mb-1">{stat.label}</p>
-                        <div className="flex items-baseline gap-2">
-                            <span className="text-xl font-bold text-white">{stat.value}</span>
-                            <span className={`text-xs ${stat.change.startsWith('+') ? 'text-green-400' : 'text-primary'}`}>
-                                {stat.change}
-                            </span>
-                        </div>
-                    </Card>
-                ))}
-            </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-1">
                     <AthleteRadarChart />
                 </div>
                 <div className="lg:col-span-2">
-                    <VolumeLineChart />
+                    <VolumeLineChart workouts={workouts} />
                 </div>
                 <div className="lg:col-span-1">
                     <MacroDonutChart />
                 </div>
                 <div className="lg:col-span-2 min-h-[300px]">
-                    <ConsistencyHeatmap />
+                    <ConsistencyHeatmap workouts={workouts} />
                 </div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                {quickStats.map((stat, i) => (
+                    <Card key={i} className="p-5">
+                        <p className="eyebrow mb-3">{stat.label}</p>
+                        <div className="flex items-baseline gap-2">
+                            <span className="text-xl font-semibold text-white/90">
+                                {stat.value}
+                                <span className="text-sm font-normal text-slate-500 ml-1">{stat.unit}</span>
+                            </span>
+                            <span className={`text-[11px] font-medium ${stat.positive ? 'text-emerald-400/80' : 'text-rose-400/70'}`}>
+                                {stat.change}
+                            </span>
+                        </div>
+                    </Card>
+                ))}
             </div>
         </div>
     );

@@ -10,7 +10,7 @@ export const Card: React.FC<CardProps> = ({ children, className = '', onClick })
     return (
         <div
             onClick={onClick}
-            className={`glass-card ${onClick ? 'cursor-pointer hover:border-primary/50 hover:shadow-glow' : ''} ${className}`}
+            className={`glass-card ${onClick ? 'cursor-pointer glass-card-hover' : ''} ${className}`}
         >
             {children}
         </div>

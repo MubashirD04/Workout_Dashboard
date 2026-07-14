@@ -94,16 +94,17 @@ const FloatingChat: React.FC = () => {
                     bottom: '1.5rem',
                     right: '1.5rem',
                     zIndex: 9999,
-                    width: '3.5rem',
-                    height: '3.5rem',
+                    width: '3.25rem',
+                    height: '3.25rem',
                     borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #f97316, #ea580c)',
-                    border: 'none',
+                    background: 'rgba(13,17,23,0.85)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    backdropFilter: 'blur(12px)',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    boxShadow: '0 0 20px rgba(249,115,22,0.4), 0 4px 20px rgba(0,0,0,0.4)',
+                    boxShadow: '0 0 16px rgba(193,117,74,0.15), 0 4px 20px rgba(0,0,0,0.4)',
                     transition: 'transform 0.2s, box-shadow 0.2s',
                 }}
                 onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.1)')}
@@ -140,7 +141,7 @@ const FloatingChat: React.FC = () => {
             {/* Header */}
             <div
                 style={{
-                    background: 'linear-gradient(135deg, #f97316, #ea580c)',
+                    background: 'linear-gradient(135deg, #C1754A, #A8623C)',
                     padding: '0.85rem 1rem',
                     display: 'flex',
                     alignItems: 'center',

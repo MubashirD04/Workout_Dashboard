@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import FloatingChat from './FloatingChat';
 import { UserButton } from "@clerk/clerk-react";
 import { useCurrentUser } from '../hooks/useCurrentUser';
+import ErrorBoundary from './ErrorBoundary';
 
 interface DashboardLayoutProps {
     children: React.ReactNode;
@@ -179,7 +180,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
             >
                 {/* Brand */}
                 <div className="flex items-center gap-3 px-5 pt-6 pb-5">
-                    <div className="w-9 h-9 rounded-xl bg-primary shadow-glow flex items-center justify-center shrink-0">
+                    <div className="w-9 h-9 rounded-xl bg-primary shadow-glow-sm flex items-center justify-center shrink-0">
                         <span className="font-black text-white text-sm">FT</span>
                     </div>
                     <div className="leading-tight min-w-0">
@@ -199,13 +200,16 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                                 key={item.path}
                                 to={item.path}
                                 aria-current={active ? 'page' : undefined}
-                                className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 outline-none focus:outline-none ${active
-                                    ? 'bg-primary text-white shadow-glow'
-                                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                                className={`group relative flex items-center gap-3 pl-4 pr-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${active
+                                        ? 'text-white bg-primary/[0.08]'
+                                        : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
                                     }`}
                             >
+                                {active && (
+                                    <span className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-[2px] rounded-full bg-primary shadow-glow-sm" />
+                                )}
                                 <span
-                                    className={`flex items-center justify-center shrink-0 transition-colors ${active ? 'text-white' : 'text-slate-500 group-hover:text-primary'
+                                    className={`flex items-center justify-center shrink-0 transition-colors ${active ? 'text-primary' : 'text-slate-500 group-hover:text-primary'
                                         }`}
                                 >
                                     <NavIcon icon={item.icon} />
@@ -295,10 +299,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                         </p>
                     </div>
 
-                    <h1 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-lg sm:text-xl font-bold text-white whitespace-nowrap">
-                        Welcome back, {user?.name?.split(' ')[0] ?? 'there'}
-                    </h1>
-
                     <p className="hidden md:block text-xs text-slate-500 font-medium truncate max-w-xs text-right ml-auto">
                         {meta.blurb}
                     </p>
@@ -307,7 +307,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 
             {/* Main content — insets match the header's box so cards line up under it */}
             <main className="pt-28 pb-6 px-3 lg:pl-[15rem] lg:pr-3">
-                {children}
+                <ErrorBoundary key={location.pathname}>
+                    {children}
+                </ErrorBoundary>
             </main>
 
             <FloatingChat />

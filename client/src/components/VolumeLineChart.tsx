@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import {
     LineChart,
     Line,
@@ -7,8 +8,26 @@ import {
     Tooltip,
     ResponsiveContainer
 } from 'recharts';
+import { calculateWorkoutVolume } from '../utils/calculationUtils';
+import { parseDateOnly, startOfWeek } from '../utils/dateUtils';
 
-const data = [
+interface Exercise {
+    exercise_name: string;
+    sets: number;
+    reps: number;
+    weight: number;
+}
+
+interface Workout {
+    date: string;
+    exercises?: Exercise[];
+}
+
+interface Props {
+    workouts?: Workout[];
+}
+
+const DUMMY_DATA = [
     { name: 'Week 1', volume: 4000 },
     { name: 'Week 2', volume: 3000 },
     { name: 'Week 3', volume: 5000 },
@@ -18,46 +37,64 @@ const data = [
     { name: 'Week 7', volume: 7490 },
 ];
 
-const VolumeLineChart = () => {
+const buildWeeklyVolume = (workouts: Workout[]) => {
+    const buckets = new Map<number, number>();
+
+    workouts.forEach((w) => {
+        if (!w.date) return;
+        const weekStart = startOfWeek(parseDateOnly(w.date)).getTime();
+        const vol = calculateWorkoutVolume(w.exercises);
+        buckets.set(weekStart, (buckets.get(weekStart) || 0) + vol);
+    });
+
+    const sortedWeeks = Array.from(buckets.keys()).sort((a, b) => a - b);
+    const last7 = sortedWeeks.slice(-7);
+
+    return last7.map((ts) => ({
+        name: new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+        volume: buckets.get(ts) || 0,
+    }));
+};
+
+const VolumeLineChart: React.FC<Props> = ({ workouts = [] }) => {
+    const realData = useMemo(() => buildWeeklyVolume(workouts), [workouts]);
+    const isSample = realData.length === 0;
+    const data = isSample ? DUMMY_DATA : realData;
+
     return (
-        <div className="w-full h-[300px] glass-card p-4">
-            <h3 className="text-xl font-bold mb-4 text-primary text-glow">Volume Over Time</h3>
-            <ResponsiveContainer width="100%" height="85%">
-                <LineChart
-                    data={data}
-                    margin={{
-                        top: 5,
-                        right: 30,
-                        left: 20,
-                        bottom: 5,
-                    }}
-                >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+        <div className="w-full h-[300px] glass-card p-6">
+            <div className="flex items-center justify-between mb-4">
+                <p className="eyebrow">Volume Over Time</p>
+                {isSample && <span className="text-[10px] text-slate-600 italic">Sample data</span>}
+            </div>
+            <ResponsiveContainer width="100%" height="82%">
+                <LineChart data={data} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="0" stroke="rgba(255,255,255,0.04)" vertical={false} />
                     <XAxis
                         dataKey="name"
-                        stroke="#94a3b8"
-                        tick={{ fill: '#94a3b8', fontSize: 12 }}
+                        stroke="#475569"
+                        tick={{ fill: '#64748b', fontSize: 11 }}
                         tickLine={false}
                         axisLine={false}
                     />
                     <YAxis
-                        stroke="#94a3b8"
-                        tick={{ fill: '#94a3b8', fontSize: 12 }}
+                        stroke="#475569"
+                        tick={{ fill: '#64748b', fontSize: 11 }}
                         tickLine={false}
                         axisLine={false}
                     />
                     <Tooltip
-                        contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc' }}
-                        itemStyle={{ color: '#F97316' }}
-                        cursor={{ stroke: 'rgba(255,255,255,0.1)' }}
+                        contentStyle={{ backgroundColor: '#0d1117', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', color: '#e2e8f0' }}
+                        itemStyle={{ color: '#C1754A' }}
+                        cursor={{ stroke: 'rgba(255,255,255,0.08)' }}
                     />
                     <Line
                         type="monotone"
                         dataKey="volume"
-                        stroke="#F97316"
-                        strokeWidth={3}
-                        dot={{ r: 4, fill: '#1e293b', stroke: '#F97316', strokeWidth: 2 }}
-                        activeDot={{ r: 6, fill: '#F97316' }}
+                        stroke="#C1754A"
+                        strokeWidth={2}
+                        dot={{ r: 3, fill: '#0d1117', stroke: '#C1754A', strokeWidth: 1.5 }}
+                        activeDot={{ r: 5, fill: '#C1754A' }}
                     />
                 </LineChart>
             </ResponsiveContainer>
