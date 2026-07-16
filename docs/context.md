@@ -58,15 +58,18 @@ The first user to sign in is bootstrapped as admin; subsequent sign-ups default 
 │   ├── brief.md
 │   ├── context.md
 │   ├── convex_limits_and_pagination.md
-│   └── audit_report.md
+│   ├── audit_report.md
+│   └── ui_redesign_guide.md
 ├── package.json            # Root dependencies (Convex, Clerk, HF inference)
 └── README.md
 ```
 
 ## Known Frontend Gaps
 
-- `DashboardHome.tsx`'s stat cards and `AthleteRadarChart`, `VolumeLineChart`, and `ConsistencyHeatmap` currently render static/random mock data, not live Convex data. Treat the dashboard home as a visual placeholder, not a functioning summary view.
-- `MacroDonutChart` was migrated off the legacy `src/api/` client onto `usePaginatedQuery(api.nutritionLogs.getNutritionLogs)` — this is the pattern to follow if the other dashboard charts are wired up later.
+- **Dashboard Charts & Metrics**: `DashboardHome.tsx` integrates both live database values and clean mock fallbacks:
+  - Weekly Volume and the `VolumeLineChart` and `ConsistencyHeatmap` run off live data queried via `usePaginatedQuery(api.workouts.getWorkouts)`. They fall back to dummy data only if the user's database is empty.
+  - The `AthleteRadarChart` and individual stat cards (e.g. Heart Rate, One Rep Max, Sleep Quality, Body Fat) still render static visual placeholders.
+  - `MacroDonutChart` is fully powered by live database logs via `usePaginatedQuery(api.nutritionLogs.getNutritionLogs)`.
 - Trainer client-detail view (`ClientsView` → `ClientDetail`) never renders Progress Photos, matching the access rule in `convex/lib/auth.ts`.
 ---
 

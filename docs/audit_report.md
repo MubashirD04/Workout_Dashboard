@@ -1,6 +1,6 @@
 # Convex Limits Audit Report
 
-**Date:** 2026-07-09  
+**Date:** 2026-07-14 (Rerun & Verified)  
 **Tool:** `scripts/auditLimits.ts`  
 **Deployment:** Connected via `VITE_CONVEX_URL` / `CONVEX_URL` from `.env.local`
 

@@ -270,13 +270,17 @@ export const getFitnessContext = internalQuery({
 });
 
 export const getConversationHistory = internalQuery({
-  args: { conversationId: v.id("conversations") },
+  args: { conversationId: v.id("conversations"), limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
-    const messages = await (ctx.db
-      .query("messages") as any)
-      .withIndex("by_conversation_and_time", (q: any) => q.eq("conversationId", args.conversationId))
-      .collect();
-    return messages.map((m: any) => ({ role: m.role, content: m.content }));
+    const recent = await ctx.db
+      .query("messages")
+      .withIndex("by_conversation_and_time", (q) =>
+        q.eq("conversationId", args.conversationId)
+      )
+      .order("desc")
+      .take(args.limit ?? 8);
+
+    return recent.reverse().map((m) => ({ role: m.role, content: m.content }));
   },
 });
 
@@ -317,22 +321,38 @@ export const askQuestion = action({
     const { HfInference } = await import("@huggingface/inference");
     const hf = new HfInference(hfToken);
 
-    const output = await hf.featureExtraction({
-      model: "sentence-transformers/all-MiniLM-L6-v2",
-      inputs: args.question,
-    });
+    // HF free-tier models go cold and return 500 between requests.
+    // Retry up to 3 times with increasing delays before giving up.
+    let embeddingValues: number[] | null = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const output = await hf.featureExtraction({
+          model: "sentence-transformers/all-MiniLM-L6-v2",
+          inputs: args.question,
+        });
+        embeddingValues = Array.isArray((output as any)[0])
+          ? (output as number[][]).flat()
+          : (output as number[]);
+        break;
+      } catch {
+        if (attempt < 2) {
+          // Wait 5s, then 10s before the final attempt
+          await new Promise((r) => setTimeout(r, 5000 * (attempt + 1)));
+        }
+      }
+    }
 
-    const embeddingValues = output as number[];
-    if (!Array.isArray(embeddingValues))
-      throw new Error("Could not extract embedding from HF API response");
-
-    const results = await ctx.vectorSearch("bookKnowledge", "by_embedding", {
-      vector: embeddingValues,
-      limit: 5,
-    });
-
-    const relevantIds = results.filter((r) => r._score > 0.4).map((r) => r._id);
-    const chunks = await ctx.runQuery(internal.chat.getChunks, { ids: relevantIds }) as any;
+    // Graceful degradation: if HF is unavailable after retries, skip RAG
+    // and answer from the user's personal fitness data alone.
+    let chunks: any[] = [];
+    if (embeddingValues && embeddingValues.length > 0) {
+      const results = await ctx.vectorSearch("bookKnowledge", "by_embedding", {
+        vector: embeddingValues,
+        limit: 5,
+      });
+      const relevantIds = results.filter((r) => r._score > 0.4).map((r) => r._id);
+      chunks = await ctx.runQuery(internal.chat.getChunks, { ids: relevantIds }) as any;
+    }
 
     const fitnessContext = await ctx.runQuery(internal.chat.getFitnessContext, {
       userId: args.targetUserId,
@@ -344,7 +364,6 @@ export const askQuestion = action({
         conversationId: args.conversationId,
       });
       historyContext = history
-        .order("desc").take(8)
         .map((msg: any) => `${msg.role === "user" ? "User" : "Assistant"}: ${msg.content}`)
         .join("\n");
     }
@@ -391,7 +410,7 @@ INSTRUCTIONS:
         Authorization: `Bearer ${groqApiKey}`,
       },
       body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
+        model: "llama-3.1-8b-instant",
         messages: [
           { role: "system", content: systemMessage },
           { role: "user", content: args.question },

@@ -11,19 +11,19 @@ A high-performance fitness and workout tracking application designed to help use
 
 ## Features
 
-- **🔐 Authentication & Roles**: Clerk-powered sign-in with three roles — **admin**, **trainer**, and **client**.
-- **👥 Trainer Portal**: Trainers manage clients, generate invite codes, and view client fitness data (excluding progress photos).
-- **🤖 AI Fitness Coach**: Professional AI coach using RAG (Retrieval-Augmented Generation) to provide personalized fitness advice based on your data and expert knowledge.
-- **📊 Advanced Analytics**:
+- **Authentication & Roles**: Clerk-powered sign-in with three roles — **admin**, **trainer**, and **client**.
+- **Trainer Portal**: Trainers manage clients, generate invite codes, and view client fitness data (excluding progress photos).
+- **AI Fitness Coach**: Professional AI coach using RAG (Retrieval-Augmented Generation) to provide personalized fitness advice based on your data and expert knowledge.
+- **Advanced Analytics**:
   - **Volume Chart**: Track total weight moved over time.
   - **Consistency Heatmap**: Visualize workout frequency.
   - **Athlete Radar**: Compare strength, endurance, and consistency metrics.
   - **Macro Donut**: Real-time breakdown of calorie and macro intake.
-- **🏋️ Workout Logging**: Full exercise tracking with sets, reps, and weights.
-- **🏃 Cardio Tracking**: Log distance and duration for various activities.
-- **📏 Body Metrics**: Comprehensive tracking of weight and body measurements.
-- **🍎 Nutrition Tracker**: Monitor daily calories and macro targets.
-- **🖼️ Progress Timeline**: Visual photo journey of your transformation (client-only; trainers cannot access).
+- **Workout Logging**: Full exercise tracking with sets, reps, and weights.
+- **Cardio Tracking**: Log distance and duration for various activities.
+- **Body Metrics**: Comprehensive tracking of weight and body measurements.
+- **Nutrition Tracker**: Monitor daily calories and macro targets.
+- **Progress Timeline**: Visual photo journey of your transformation (client-only; trainers cannot access).
 
 ## Quick Start
 
@@ -100,3 +100,4 @@ For more detailed information, please refer to:
 - [Technical Context](docs/context.md)
 - [Convex Limits & Pagination](docs/convex_limits_and_pagination.md)
 - [Convex Limits Audit Report](docs/audit_report.md)
+- [UI Redesign Guide](docs/ui_redesign_guide.md)
