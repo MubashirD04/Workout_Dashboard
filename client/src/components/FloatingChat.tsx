@@ -11,8 +11,12 @@ interface Message {
     sources?: string[];
 }
 
-const FloatingChat: React.FC = () => {
-    const [isOpen, setIsOpen] = useState(false);
+interface FloatingChatProps {
+    isOpen: boolean;
+    onClose: () => void;
+}
+
+const FloatingChat: React.FC<FloatingChatProps> = ({ isOpen, onClose }) => {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
@@ -84,94 +88,41 @@ const FloatingChat: React.FC = () => {
         setConvexConversationId(null);
     };
 
-    /* ── Collapsed button ── */
-    if (!isOpen) {
-        return (
-            <button
-                onClick={() => setIsOpen(true)}
-                style={{
-                    position: 'fixed',
-                    bottom: '1.5rem',
-                    right: '1.5rem',
-                    zIndex: 9999,
-                    width: '3.25rem',
-                    height: '3.25rem',
-                    borderRadius: '50%',
-                    background: 'rgba(13,17,23,0.85)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    backdropFilter: 'blur(12px)',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 0 16px rgba(193,117,74,0.15), 0 4px 20px rgba(0,0,0,0.4)',
-                    transition: 'transform 0.2s, box-shadow 0.2s',
-                }}
-                onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.1)')}
-                onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
-                aria-label="Open AI coach"
-            >
-                {/* Chat bubble icon */}
-                <svg width="22" height="22" fill="none" stroke="white" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round"
-                        d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                </svg>
-            </button>
-        );
-    }
-
-    /* ── Expanded panel ── */
     return (
         <div
-            style={{
-                position: 'fixed',
-                bottom: '1.5rem',
-                right: '1.5rem',
-                zIndex: 9999,
-                width: '22rem',
-                height: '38rem',
-                display: 'flex',
-                flexDirection: 'column',
-                borderRadius: '1rem',
-                overflow: 'hidden',
-                boxShadow: '0 25px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.07)',
-                background: '#0f172a',
-            }}
+            className={`fixed z-[9999] top-3 bottom-3 right-3 w-full max-w-sm flex flex-col glass-card overflow-hidden transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-[calc(100%_+_0.75rem)] pointer-events-none'
+                }`}
+            aria-hidden={!isOpen}
         >
             {/* Header */}
-            <div
-                style={{
-                    background: 'linear-gradient(135deg, #C1754A, #A8623C)',
-                    padding: '0.85rem 1rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    flexShrink: 0,
-                }}
-            >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <div style={{
-                        width: '2rem', height: '2rem', borderRadius: '50%',
-                        background: 'rgba(255,255,255,0.2)', display: 'flex',
-                        alignItems: 'center', justifyContent: 'center',
-                    }}>
-                        <svg width="16" height="16" fill="none" stroke="white" strokeWidth="2" viewBox="0 0 24 24">
+            <div className="flex items-center justify-between gap-2 px-4 py-3.5 bg-gradient-to-r from-primary to-primary-hover shrink-0">
+                <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+                        <svg className="w-4 h-4" fill="none" stroke="white" strokeWidth={2} viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
                         </svg>
                     </div>
-                    <div>
-                        <div style={{ color: 'white', fontWeight: 700, fontSize: '0.85rem', lineHeight: 1.2 }}>AI Coach</div>
-                        <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.7rem' }}>Fitness &amp; Nutrition</div>
+                    <div className="min-w-0 leading-tight">
+                        <p className="text-white font-bold text-sm truncate">AI Coach</p>
+                        <p className="text-white/75 text-[11px] truncate">Fitness &amp; Nutrition</p>
                     </div>
                 </div>
-                <div style={{ display: 'flex', gap: '0.25rem' }}>
-                    <button onClick={handleNewChat} title="New chat" style={iconBtnStyle}>
-                        <svg width="16" height="16" fill="none" stroke="white" strokeWidth="2" viewBox="0 0 24 24">
+                <div className="flex items-center gap-1 shrink-0">
+                    <button
+                        onClick={handleNewChat}
+                        title="New chat"
+                        className="p-1.5 rounded-lg text-white/85 hover:text-white hover:bg-white/10 transition-colors outline-none focus:outline-none"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                         </svg>
                     </button>
-                    <button onClick={() => setIsOpen(false)} title="Close" style={iconBtnStyle}>
-                        <svg width="16" height="16" fill="none" stroke="white" strokeWidth="2" viewBox="0 0 24 24">
+                    <button
+                        onClick={onClose}
+                        title="Close"
+                        className="p-1.5 rounded-lg text-white/85 hover:text-white hover:bg-white/10 transition-colors outline-none focus:outline-none"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
@@ -179,52 +130,40 @@ const FloatingChat: React.FC = () => {
             </div>
 
             {/* Messages */}
-            <div style={{
-                flex: 1, overflowY: 'auto', padding: '1rem',
-                display: 'flex', flexDirection: 'column', gap: '0.75rem',
-                background: '#020617',
-            }}>
+            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3 bg-slate-950/60">
                 {messages.length === 0 && (
-                    <div style={{
-                        flex: 1, display: 'flex', flexDirection: 'column',
-                        alignItems: 'center', justifyContent: 'center',
-                        color: '#64748b', textAlign: 'center', padding: '1rem',
-                    }}>
-                        <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>💪</div>
-                        <p style={{ marginBottom: '0.5rem', fontSize: '0.85rem' }}>Hi! I'm your AI fitness coach.</p>
-                        <p style={{ fontSize: '0.75rem', marginBottom: '0.5rem' }}>I have access to:</p>
-                        <ul style={{ listStyle: 'none', padding: 0, fontSize: '0.72rem', textAlign: 'left' }}>
+                    <div className="flex-1 flex flex-col items-center justify-center text-center px-4 text-muted">
+                        <div className="text-3xl mb-2">💪</div>
+                        <p className="text-sm text-slate-300 mb-2">Hi! I'm your AI fitness coach.</p>
+                        <p className="eyebrow mb-2">I have access to</p>
+                        <ul className="text-left space-y-1">
                             {['Your workout history', 'Your cardio sessions', 'Your body metrics', '6 professional fitness books'].map(item => (
-                                <li key={item} style={{ marginBottom: '0.2rem' }}>✓ {item}</li>
+                                <li key={item} className="flex items-center gap-1.5 text-xs text-slate-400">
+                                    <span className="text-primary">✓</span> {item}
+                                </li>
                             ))}
                         </ul>
-                        <p style={{ marginTop: '0.75rem', fontSize: '0.75rem' }}>Ask me anything!</p>
+                        <p className="text-xs text-slate-400 mt-3">Ask me anything!</p>
                     </div>
                 )}
 
                 {messages.map((msg, idx) => (
-                    <div key={idx} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
-                        <div style={{
-                            maxWidth: '85%',
-                            background: msg.role === 'user'
-                                ? 'linear-gradient(135deg, #f97316, #ea580c)'
-                                : '#1e293b',
-                            color: 'white',
-                            borderRadius: msg.role === 'user' ? '1rem 1rem 0.25rem 1rem' : '1rem 1rem 1rem 0.25rem',
-                            padding: '0.5rem 0.75rem',
-                            fontSize: '0.8rem',
-                            lineHeight: 1.5,
-                        }}>
-                            <p style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{msg.content}</p>
+                    <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                        <div
+                            className={`max-w-[85%] px-3 py-2 text-[0.8rem] leading-relaxed ${msg.role === 'user'
+                                    ? 'bg-primary text-white rounded-2xl rounded-br-md'
+                                    : 'bg-slate-850/80 border border-white/[0.06] text-slate-100 rounded-2xl rounded-bl-md'
+                                }`}
+                        >
+                            <p className="whitespace-pre-wrap break-words">{msg.content}</p>
                             {msg.sources && msg.sources.length > 0 && (
-                                <div style={{ marginTop: '0.4rem', paddingTop: '0.4rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-                                    <p style={{ margin: '0 0 0.25rem', fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)' }}>Sources:</p>
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+                                <div className="mt-1.5 pt-1.5 border-t border-white/10">
+                                    <p className="text-[10px] text-white/50 mb-1">Sources:</p>
+                                    <div className="flex flex-wrap gap-1">
                                         {msg.sources.map((src, i) => (
-                                            <span key={i} style={{
-                                                fontSize: '0.62rem', background: 'rgba(255,255,255,0.1)',
-                                                padding: '0.1rem 0.4rem', borderRadius: '0.25rem',
-                                            }}>{src}</span>
+                                            <span key={i} className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded">
+                                                {src}
+                                            </span>
                                         ))}
                                     </div>
                                 </div>
@@ -234,18 +173,14 @@ const FloatingChat: React.FC = () => {
                 ))}
 
                 {loading && (
-                    <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-                        <div style={{
-                            background: '#1e293b', borderRadius: '1rem 1rem 1rem 0.25rem',
-                            padding: '0.6rem 0.85rem', display: 'flex', gap: '0.3rem', alignItems: 'center',
-                        }}>
+                    <div className="flex justify-start">
+                        <div className="bg-slate-850/80 border border-white/[0.06] rounded-2xl rounded-bl-md px-3.5 py-2.5 flex items-center gap-1">
                             {[0, 150, 300].map(delay => (
-                                <span key={delay} style={{
-                                    width: '6px', height: '6px', borderRadius: '50%',
-                                    background: '#64748b', display: 'inline-block',
-                                    animation: 'bounce 1s ease-in-out infinite',
-                                    animationDelay: `${delay}ms`,
-                                }} />
+                                <span
+                                    key={delay}
+                                    className="w-1.5 h-1.5 rounded-full bg-slate-500 animate-bounce"
+                                    style={{ animationDelay: `${delay}ms` }}
+                                />
                             ))}
                         </div>
                     </div>
@@ -255,11 +190,8 @@ const FloatingChat: React.FC = () => {
             </div>
 
             {/* Input */}
-            <div style={{
-                padding: '0.65rem', background: '#0f172a',
-                borderTop: '1px solid rgba(255,255,255,0.06)', flexShrink: 0,
-            }}>
-                <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.5rem' }}>
+            <div className="px-3 py-2.5 bg-slate-900/80 border-t border-white/[0.06] shrink-0">
+                <div className="flex items-end gap-2">
                     <textarea
                         ref={textareaRef}
                         rows={1}
@@ -268,63 +200,22 @@ const FloatingChat: React.FC = () => {
                         onKeyDown={handleKeyDown}
                         placeholder="Ask me anything..."
                         disabled={loading}
-                        style={{
-                            flex: 1,
-                            background: '#1e293b',
-                            border: '1px solid rgba(255,255,255,0.08)',
-                            borderRadius: '0.5rem',
-                            padding: '0.45rem 0.75rem',
-                            fontSize: '0.8rem',
-                            color: 'white',
-                            outline: 'none',
-                            transition: 'border-color 0.2s',
-                            resize: 'none',
-                            overflow: 'hidden',
-                            minHeight: '2.2rem',
-                            maxHeight: '120px',
-                            lineHeight: '1.4',
-                        }}
-                        onFocus={e => (e.currentTarget.style.borderColor = '#f97316')}
-                        onBlur={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)')}
+                        className="flex-1 min-h-[2.2rem] max-h-[120px] resize-none overflow-hidden bg-slate-850/80 border border-white/10 rounded-xl px-3 py-2 text-[0.8rem] leading-relaxed text-white placeholder:text-slate-500 outline-none focus:border-primary transition-colors"
                     />
                     <button
                         onClick={handleSend}
                         disabled={!input.trim() || loading}
-                        style={{
-                            background: input.trim() && !loading ? 'linear-gradient(135deg, #f97316, #ea580c)' : '#1e293b',
-                            border: 'none',
-                            borderRadius: '0.5rem',
-                            padding: '0.45rem 0.85rem',
-                            color: 'white',
-                            fontSize: '0.78rem',
-                            fontWeight: 700,
-                            cursor: input.trim() && !loading ? 'pointer' : 'not-allowed',
-                            opacity: input.trim() && !loading ? 1 : 0.4,
-                            transition: 'all 0.2s',
-                        }}
+                        className={`px-3.5 py-2 rounded-xl text-[0.78rem] font-bold shrink-0 transition-all ${input.trim() && !loading
+                                ? 'bg-primary text-white hover:bg-primary-hover shadow-glow-sm'
+                                : 'bg-slate-850/80 text-slate-500 cursor-not-allowed'
+                            }`}
                     >
                         Send
                     </button>
                 </div>
             </div>
-
-            {/* Bounce animation */}
-            <style>{`@keyframes bounce { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-6px)} }`}</style>
         </div>
     );
-};
-
-const iconBtnStyle: React.CSSProperties = {
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
-    padding: '0.25rem',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: '0.25rem',
-    opacity: 0.8,
-    transition: 'opacity 0.2s',
 };
 
 export default FloatingChat;

@@ -121,6 +121,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     const { user, isAdmin, canViewClients } = useCurrentUser();
     const [mobileNavOpen, setMobileNavOpen] = useState(false);
     const [profileOpen, setProfileOpen] = useState(false);
+    const [chatOpen, setChatOpen] = useState(false);
     const profileRef = useRef<HTMLDivElement>(null);
 
     // Close the mobile drawer automatically whenever the route changes.
@@ -201,8 +202,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                                 to={item.path}
                                 aria-current={active ? 'page' : undefined}
                                 className={`group relative flex items-center gap-3 pl-4 pr-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${active
-                                        ? 'text-white bg-primary/[0.08]'
-                                        : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
+                                    ? 'text-white bg-primary/[0.08]'
+                                    : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
                                     }`}
                             >
                                 {active && (
@@ -299,9 +300,20 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                         </p>
                     </div>
 
-                    <p className="hidden md:block text-xs text-slate-500 font-medium truncate max-w-xs text-right ml-auto">
-                        {meta.blurb}
-                    </p>
+                    <div className="flex items-center gap-3 ml-auto shrink-0">
+                        <p className="hidden md:block text-xs text-slate-500 font-medium truncate max-w-xs text-right">
+                            {meta.blurb}
+                        </p>
+                        <button
+                            onClick={() => setChatOpen(true)}
+                            className="relative p-2 rounded-lg text-slate-400 hover:text-primary hover:bg-white/5 transition-colors outline-none focus:outline-none"
+                            aria-label="Open AI coach"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
             </header>
 
@@ -312,7 +324,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                 </ErrorBoundary>
             </main>
 
-            <FloatingChat />
+            <FloatingChat isOpen={chatOpen} onClose={() => setChatOpen(false)} />
         </div>
     );
 };
