@@ -20,6 +20,9 @@ Previously highlighted risks concerning unbounded query scans in user-activity l
 
 ---
 
+> [!NOTE]
+> A 12th table, `aiRequestLog` (per-user AI rate-limit counters), was added after this scan ran. Re-run the audit to include it. Rows are never pruned once written, so it grows one row per `askQuestion` call indefinitely — worth a periodic cleanup batch (same recursive-scheduler pattern as `deleteMessagesBatch`) once it shows up as a real row count here.
+
 ## Table Scan Results
 
 | Table | Rows | Avg Row Size | Est. Total Size | Row Limit (32k) | Size Limit (16 MiB) | Status |
@@ -52,7 +55,7 @@ Previously highlighted risks concerning unbounded query scans in user-activity l
 - **5,270 embedded chunks** loaded for RAG (~9 KB each, containing the embedding vector + source text metadata).
 - Estimated full-table payload (**~45.66 MiB**) is nearly **3x the 16 MiB return limit**. Any query that `.collect()`s the entire table will crash.
 - **Safety status:** **Fully Safe.** The RAG query `askQuestion` performs `ctx.vectorSearch(..., { limit: 8 })`, which uses the built-in index, is bounded, and reads only matching documents.
-- **Batch purges:** The `clearChunks` mutation is batch-limited (100 rows per call) to avoid execution limits when reloading knowledge bases.
+- **Batch purges:** The `clearChunks` mutation is batch-limited (100 rows per call) to avoid execution limits when reloading knowledge bases. It, along with `addChunk`/`addChunks`, is an `internalMutation` — writes into this table only happen via `npx convex run` (see `scripts/loadEmbeddings.ts`), never over the public API.
 
 ### 2. User Data and Fitness Logs — Scales Safe
 - All fitness logs now accept `paginationOpts` and query through `.paginate()` in the backend, which correlates to `usePaginatedQuery` in the React frontend.
@@ -64,8 +67,8 @@ Previously highlighted risks concerning unbounded query scans in user-activity l
 - Each background batch deletes up to 100 messages (`.take(100)`) in a single transaction, then schedules the next batch. This guarantees zero risk of hit-limits on very long user conversations.
 
 ### 4. Auditing Access and Local Tooling
-- The CLI tool `scripts/auditLimits.ts` query runs by supplying a secure `bypassKey` that matches the backend `AUDIT_BYPASS_KEY` configuration. 
-- In development deployments, the backend automatically allows the query to run to facilitate local development without explicit key setups.
+- `audit.getTableChunk` is an `internalQuery` — it is not reachable over the public Convex API under any circumstances. The `AUDIT_BYPASS_KEY`/dev-deployment bypass this section previously described was a critical unauthenticated full-database-dump hole (see the backend security audit) and has been removed entirely.
+- `scripts/auditLimits.ts` now runs the query via `npx convex run audit:getTableChunk '<args>'`, which uses real deployment credentials (the same ones needed to `npx convex deploy`) instead of a request-supplied secret.
 
 ---
 
@@ -79,6 +82,10 @@ Previously highlighted risks concerning unbounded query scans in user-activity l
 
 ## How to Run
 ```bash
-# Requires VITE_CONVEX_URL in .env.local
+# Requires the Convex CLI to be authenticated against the target deployment
+# (the same credentials used for `npx convex dev` / `npx convex deploy`).
 npx tsx scripts/auditLimits.ts
+
+# Against the prod deployment:
+npx tsx scripts/auditLimits.ts --prod
 ```

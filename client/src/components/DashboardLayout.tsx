@@ -163,7 +163,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     const meta = getPageMeta(location.pathname);
 
     return (
-        <div className="min-h-screen bg-slate-950 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black text-white selection:bg-primary/30">
+        <div className="min-h-screen bg-slate-950 text-white selection:bg-primary/30">
 
             {/* Mobile overlay */}
             {mobileNavOpen && (
@@ -176,7 +176,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 
             {/* Sidebar — full-height panel flush against the edge, not a floating card */}
             <aside
-                className={`fixed z-50 top-0 bottom-0 left-0 w-56 flex flex-col bg-slate-900/95 backdrop-blur-lg border-r border-white/10 transition-transform duration-300 ease-in-out lg:translate-x-0 ${mobileNavOpen ? 'translate-x-0' : '-translate-x-full'
+                className={`fixed z-50 top-0 bottom-0 left-0 w-56 flex flex-col bg-slate-900 border-r border-white/[0.07] transition-transform duration-300 ease-in-out lg:translate-x-0 ${mobileNavOpen ? 'translate-x-0' : '-translate-x-full'
                     }`}
             >
                 {/* Brand */}

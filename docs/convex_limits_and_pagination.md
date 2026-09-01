@@ -134,10 +134,12 @@ Trainers viewing a client's data pass `targetUserId` as an additional query arg.
 
 Use the **Health & Insights** panel in the Convex Deployment Dashboard for real-time analysis of function performance and read patterns.
 
-For local sampling, `scripts/auditLimits.ts` scans table row counts and estimated sizes. It requires `VITE_CONVEX_URL` or `CONVEX_URL` in `.env.local`:
+For local sampling, `scripts/auditLimits.ts` scans table row counts and estimated sizes. It calls the `internalQuery` `audit.getTableChunk` via `npx convex run` under the hood, so it needs the Convex CLI authenticated against the target deployment (the same credentials `npx convex dev`/`deploy` use) rather than any URL or key in `.env.local`:
 
 ```bash
 npx tsx scripts/auditLimits.ts
+# or against prod:
+npx tsx scripts/auditLimits.ts --prod
 ```
 
 > [!NOTE]

@@ -62,8 +62,8 @@ const DashboardHome: React.FC = () => {
         <div className="space-y-8">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div>
-                    <h2 className="text-3xl font-normal text-white">
-                        Welcome back, <span className="font-serif italic text-white/90">{user?.name?.split(' ')[0] ?? 'there'}</span>
+                    <h2 className="text-3xl font-semibold tracking-tight text-white">
+                        Welcome back, {user?.name?.split(' ')[0] ?? 'there'}
                     </h2>
                     <p className="text-slate-500 mt-1.5 text-sm">Here's your performance overview for today.</p>
                 </div>

@@ -24,7 +24,7 @@ A multi-user fitness tracking dashboard with:
 | Auth | **Clerk** (browser) + Convex JWT validation |
 | Backend | **Convex** (Document DB + Vector Index) |
 | Embeddings | **Hugging Face Inference API** (`all-MiniLM-L6-v2`) |
-| LLM | Groq (`llama-3.3-70b-versatile`) |
+| LLM | Groq (`openai/gpt-oss-20b`) |
 | Hosting | Vercel (Frontend) + Convex (Backend) |
 
 ---
@@ -59,3 +59,4 @@ A multi-user fitness tracking dashboard with:
 - **Vector search**: Book knowledge chunks are embedded with Hugging Face's 384-dimensional model (`sentence-transformers/all-MiniLM-L6-v2`) and stored in a Convex vector index.
 - **Trainer photo restriction**: Trainers can view client workouts, cardio, metrics, and nutrition but cannot access progress photos.
 - **Identity security**: User profile fields are sourced from verified Clerk JWT claims, not client-supplied mutation arguments.
+- **AI coach rate limiting**: Each caller is capped at 10 `askQuestion` calls per 5 minutes, since every call makes billed Hugging Face + Groq API requests.

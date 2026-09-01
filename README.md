@@ -75,7 +75,9 @@ A high-performance fitness and workout tracking application designed to help use
 5. **Load book knowledge** (optional, for AI coach RAG):
 
    ```bash
-   # Requires book_knowledge.csv in the repo root and HF_TOKEN in .env.local
+   # Requires book_knowledge.csv in the repo root, HF_TOKEN in .env.local,
+   # and the Convex CLI authenticated against the target deployment (it
+   # writes via `npx convex run`, the same credentials `convex dev`/`deploy` use)
    npx tsx scripts/loadEmbeddings.ts
    ```
 

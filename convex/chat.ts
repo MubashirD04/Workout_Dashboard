@@ -37,11 +37,14 @@ export const getConversations = query({
   },
 });
 
-export const clearChunks = mutation({
+// Internal-only: these write straight into the corpus that askQuestion
+// feeds into the AI's system prompt with no escaping. A public, unauthenticated
+// version of this is a prompt-injection and cost-abuse vector. Run these via
+// `npx convex run chat:<name> '<args>'` with real deployment credentials
+// (see scripts/loadEmbeddings.ts), the same pattern used for audit.getTableChunk.
+export const clearChunks = internalMutation({
   args: {},
   handler: async (ctx) => {
-    const me = await getAuthenticatedUser(ctx);
-    if (me.role !== "admin") throw new Error("Admin only.");
     await ctx.scheduler.runAfter(0, internal.chat.clearChunksBatch, {});
     return { started: true };
   },
@@ -60,7 +63,7 @@ export const clearChunksBatch = internalMutation({
   },
 });
 
-export const addChunk = mutation({
+export const addChunk = internalMutation({
   args: {
     book_title: v.string(),
     chunk_index: v.number(),
@@ -72,7 +75,7 @@ export const addChunk = mutation({
   },
 });
 
-export const addChunks = mutation({
+export const addChunks = internalMutation({
   args: {
     chunks: v.array(
       v.object({
@@ -140,7 +143,7 @@ export const deleteMessagesBatch = internalMutation({
   args: { conversationId: v.id("conversations") },
   handler: async (ctx, args) => {
     const batch = await (ctx.db.query("messages") as any)
-      .withIndex("by_creation_time", (q: any) => q.eq("conversationId", args.conversationId))
+      .withIndex("by_conversation_and_time", (q: any) => q.eq("conversationId", args.conversationId))
       .take(100);
     for (const m of batch) await ctx.db.delete(m._id);
     if (batch.length === 100) {
@@ -284,6 +287,38 @@ export const getConversationHistory = internalQuery({
   },
 });
 
+// SECURITY: Cap per-user AI usage — each call makes billed HF + Groq API
+// requests with no other cost control in front of it.
+const AI_RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
+const AI_RATE_LIMIT_MAX_REQUESTS = 10;
+
+export const recordAiRequest = internalMutation({
+  args: { tokenIdentifier: v.string() },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", args.tokenIdentifier))
+      .unique();
+    if (!user) throw new Error("User not found.");
+
+    const windowStart = Date.now() - AI_RATE_LIMIT_WINDOW_MS;
+    const recentCount = await ctx.db
+      .query("aiRequestLog")
+      .withIndex("by_user_and_time", (q) =>
+        q.eq("userId", user._id).gte("timestamp", windowStart)
+      )
+      .collect();
+
+    if (recentCount.length >= AI_RATE_LIMIT_MAX_REQUESTS) {
+      throw new Error(
+        `Rate limit exceeded: max ${AI_RATE_LIMIT_MAX_REQUESTS} AI questions per ${AI_RATE_LIMIT_WINDOW_MS / 60000} minutes. Please wait and try again.`
+      );
+    }
+
+    await ctx.db.insert("aiRequestLog", { userId: user._id, timestamp: Date.now() });
+  },
+});
+
 export const getChunks = internalQuery({
   args: { ids: v.array(v.id("bookKnowledge")) },
   handler: async (ctx, args) => {
@@ -313,6 +348,12 @@ export const askQuestion = action({
       tokenIdentifier: identity.tokenIdentifier,
       targetUserId: args.targetUserId,
       conversationId: args.conversationId,
+    });
+
+    // SECURITY: Cap how often the caller (not the target) can invoke this —
+    // each call is a billed HF + Groq request with no other cost control.
+    await ctx.runMutation(internal.chat.recordAiRequest, {
+      tokenIdentifier: identity.tokenIdentifier,
     });
 
     const hfToken = process.env.HF_TOKEN;
@@ -368,8 +409,14 @@ export const askQuestion = action({
         .join("\n");
     }
 
+    // SECURITY: Sanitize book context too, as defense in depth — addChunk/addChunks
+    // are now internal-only, but this content still originates outside the prompt itself.
     const bookContext = chunks
-      .map((chunk: any, i: number) => `[Source ${i + 1}: ${chunk.book_title}]\n${chunk.content}`)
+      .map((chunk: any, i: number) => {
+        const title = String(chunk.book_title).replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        const content = String(chunk.content).replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        return `[Source ${i + 1}: ${title}]\n${content}`;
+      })
       .join("\n\n---\n\n");
 
     // SECURITY: Sanitize fitness context to prevent prompt injection from user notes
@@ -410,7 +457,7 @@ INSTRUCTIONS:
         Authorization: `Bearer ${groqApiKey}`,
       },
       body: JSON.stringify({
-        model: "llama-3.1-8b-instant",
+        model: "openai/gpt-oss-20b",
         messages: [
           { role: "system", content: systemMessage },
           { role: "user", content: args.question },

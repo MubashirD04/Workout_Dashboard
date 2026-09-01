@@ -138,4 +138,11 @@ export default defineSchema({
     metadata: v.optional(v.any()),
     timestamp: v.number(),
   }).index("by_timestamp", ["timestamp"]),
+
+  // One row per askQuestion call, used to rate-limit the AI coach per user
+  // (it's billed to Groq/HF and does a vector search per call).
+  aiRequestLog: defineTable({
+    userId: v.id("users"),
+    timestamp: v.number(),
+  }).index("by_user_and_time", ["userId", "timestamp"]),
 });

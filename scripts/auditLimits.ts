@@ -1,19 +1,27 @@
-import { ConvexHttpClient } from "convex/browser";
-import dotenv from "dotenv";
+import { execFileSync } from "child_process";
 import path from "path";
 import { fileURLToPath } from "url";
-import { api } from "../convex/_generated/api.js";
 
-dotenv.config({ path: path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../.env") });
-dotenv.config({ path: path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../.env.local") });
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const prod = process.argv.includes("--prod");
 
-const CONVEX_URL = process.env.VITE_CONVEX_URL || process.env.CONVEX_URL;
-if (!CONVEX_URL) {
-  console.error("Please set VITE_CONVEX_URL or CONVEX_URL in .env.local");
-  process.exit(1);
+/**
+ * `audit.getTableChunk` is an internalQuery — it reads every row of any
+ * table, so it isn't reachable over the public Convex API. Running it via
+ * `npx convex run` uses real deployment credentials (the same ones needed
+ * to deploy this project) instead of a request-supplied bypass secret.
+ */
+function runConvexQuery(functionName: string, args: Record<string, unknown>): any {
+  const cliArgs = ["convex", "run", functionName, JSON.stringify(args)];
+  if (prod) cliArgs.push("--prod");
+  const output = execFileSync("npx", cliArgs, {
+    cwd: REPO_ROOT,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "inherit"],
+  });
+  const trimmed = output.trim();
+  return trimmed ? JSON.parse(trimmed) : null;
 }
-
-const client = new ConvexHttpClient(CONVEX_URL);
 
 async function main() {
   console.log("=================================================");
@@ -38,33 +46,31 @@ async function main() {
 
   for (const table of tables) {
     console.log(`\n📦 Table: ${table}`);
-    
+
     let totalCount = 0;
     let totalBytes = 0;
     let cursor: string | null = null;
     let isDone = false;
-    let error = null;
 
     process.stdout.write("  Scanning... ");
 
     try {
       while (!isDone) {
-        const result: any = await client.query(api.audit.getTableChunk, {
+        const result = runConvexQuery("audit:getTableChunk", {
           table,
           paginationOpts: {
             cursor,
             numItems: 1000,
           },
-          bypassKey: process.env.AUDIT_BYPASS_KEY,
         });
 
         totalCount += result.count;
         totalBytes += result.totalBytes;
         cursor = result.continueCursor;
         isDone = result.isDone;
-        
+
         process.stdout.write(`${totalCount} `);
-        
+
         // Safety break for audit
         if (totalCount > 1000000) {
           console.log("\n  ⚠️ Audit capped at 1M rows for performance.");
@@ -75,7 +81,7 @@ async function main() {
 
       const avgSize = totalCount > 0 ? Math.round(totalBytes / totalCount) : 0;
       const mbSize = (totalBytes / (1024 * 1024)).toFixed(2);
-      
+
       console.log(`  Rows found: ${totalCount}`);
       console.log(`  Avg Row Size: ~${avgSize} Bytes`);
       console.log(`  Estimated Total Size: ~${mbSize} MiB`);
@@ -83,7 +89,7 @@ async function main() {
       if (totalCount > 10000) {
         console.log(`  ⚠️  WARNING: Row count exceeds 10k. Ensure all frontend queries are paginated.`);
       }
-      
+
       if (totalBytes > (RETURN_LIMIT_BYTES * 0.5)) {
         console.log(`  ⚠️  WARNING: Total table size is over 8 MiB. Be careful with wide scans.`);
       }

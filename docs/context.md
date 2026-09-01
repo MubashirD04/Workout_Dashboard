@@ -50,7 +50,7 @@ The first user to sign in is bootstrapped as admin; subsequent sign-ups default 
 │   ├── nutritionLogs.ts    # Nutrition queries and mutations
 │   ├── progressPhotos.ts   # Progress photo management
 │   ├── chat.ts             # RAG logic (actions, conversations)
-│   └── audit.ts            # Internal audit log writes
+│   └── audit.ts            # Internal audit log writes + table-size sampling
 ├── scripts/
 │   ├── loadEmbeddings.ts   # CSV → Hugging Face embed → Convex bookKnowledge
 │   └── auditLimits.ts      # Local table size sampling script
@@ -92,7 +92,7 @@ The first user to sign in is bootstrapped as admin; subsequent sign-ups default 
 - **Auth:** Clerk JWT validated via `auth.config.ts`; identity resolved to `users` table
 - **Vector Search:** Convex built-in vector index (`by_embedding`)
 - **Embeddings:** Hugging Face Inference API (`sentence-transformers/all-MiniLM-L6-v2`)
-- **LLM Inference:** Groq API (`llama-3.3-70b-versatile`)
+- **LLM Inference:** Groq API (`openai/gpt-oss-20b`)
 
 ### Authentication Flow
 
@@ -117,6 +117,7 @@ The first user to sign in is bootstrapped as admin; subsequent sign-ups default 
 | `messages` | `conversationId`, `role`, `content`, `sources?`, `created_at` | — |
 | `bookKnowledge` | `book_title`, `chunk_index`, `content`, `embedding` | 384-dim vector index |
 | `auditLogs` | `actorId`, `action`, `targetId?`, `metadata?`, `timestamp` | Sensitive action logging |
+| `aiRequestLog` | `userId`, `timestamp` | One row per `askQuestion` call, used to rate-limit the AI coach per caller |
 
 All fitness data tables are scoped by `userId` and indexed with `by_user`.
 
@@ -124,14 +125,14 @@ All fitness data tables are scoped by `userId` and indexed with `by_user`.
 
 ## RAG Pipeline
 
-1. **User Query**: Received via the `askQuestion` Convex Action.
+1. **User Query**: Received via the `askQuestion` Convex Action, which is rate-limited to 10 calls per 5 minutes per authenticated caller (`chat.recordAiRequest`, backed by the `aiRequestLog` table) before any HF/Groq calls are made.
 2. **Embed Query**: Query text is sent to Hugging Face Inference API (`all-MiniLM-L6-v2`).
 3. **Vector Search**: Resulting vector performs `vectorSearch` against the `bookKnowledge` table.
 4. **Context Retrieval**:
    - Top matching chunks from book knowledge.
    - User's recent fitness data (workouts, metrics, etc.) via internal queries.
 5. **Prompt Construction**: Merges chunks, user data, and conversation history into a system prompt.
-6. **Generation**: Prompt is sent to Groq (`llama-3.3-70b-versatile`).
+6. **Generation**: Prompt is sent to Groq (`openai/gpt-oss-20b`).
 7. **Persistence**: Response is stored in the `messages` table via an internal mutation.
 
 Book knowledge is loaded offline via `scripts/loadEmbeddings.ts` reading `book_knowledge.csv`.
@@ -159,4 +160,6 @@ Book knowledge is loaded offline via `scripts/loadEmbeddings.ts` reading `book_k
 - **Authorization**: Never trust client-supplied identity fields. User name/email/clerkId come from verified JWT claims in `upsertCurrentUser`.
 - **Progress Photos**: Trainers are explicitly blocked from reading client progress photos via `assertCanReadUserData(..., includePhotos: true)`.
 - **Pagination**: Both frontend (`usePaginatedQuery`) and backend (`paginationOptsValidator` + `.paginate()`) are fully migrated for all main lists, including user activities (`workouts`, `cardioLogs`, `bodyMetrics`, `nutritionLogs`, `progressPhotos`) and user lists (`users.listAllUsers`, `users.getMyClients`). The only pagination gap is the legacy `client/src/api/` wrapper layer, which predates this migration and is broken against the current backend — do not use it for new work.
-- **Batched Deletes**: To prevent Convex transaction execution limit errors (1-second timeouts) when deleting database relationships with potentially many records (e.g. deleting messages associated with a conversation), use self-scheduling background recursive mutations (e.g. `deleteMessagesBatch`) that process items in chunks (e.g., `.take(100)`).
+- **Batched Deletes**: To prevent Convex transaction execution limit errors (1-second timeouts) when deleting database relationships with potentially many records (e.g. deleting messages associated with a conversation, or cascading a user deletion across `workouts`/`cardioLogs`/`bodyMetrics`/`nutritionLogs`/`progressPhotos`/`conversations`), use self-scheduling background recursive mutations (e.g. `chat.deleteMessagesBatch`, `users.deleteUserDataBatch`, `users.deleteUserConversationsBatch`) that process items in chunks (e.g., `.take(100)`).
+- **Internal-only for admin/system tooling**: Functions that write or read data with no per-caller scoping — bulk table dumps (`audit.getTableChunk`), the RAG corpus writers (`chat.addChunk`/`addChunks`/`clearChunks`) — must be `internalQuery`/`internalMutation`, never a public `query`/`mutation`, since a public function is reachable by anyone with the deployment URL regardless of what auth checks run inside it. Invoke them via `npx convex run <module>:<function> '<args>'` from a script (see `scripts/auditLimits.ts`, `scripts/loadEmbeddings.ts`) — this uses real deployment credentials instead of a request-supplied secret.
+- **Rate limiting external-API actions**: Any Convex Action that calls a billed third-party API (Groq, Hugging Face) on a per-request basis needs a per-caller cap in front of it — see `chat.recordAiRequest`. Don't rely on auth checks alone to bound cost.

@@ -1,8 +1,7 @@
 // convex/audit.ts
-import { internalMutation, query } from "./_generated/server";
+import { internalMutation, internalQuery } from "./_generated/server";
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
-import { getAuthenticatedUser, requireAdmin } from "./lib/auth";
 
 /**
  * Shared helper to write audit logs from mutations.
@@ -52,24 +51,18 @@ const AUDITABLE_TABLES = v.union(
  * totals client-side. This keeps each individual call well under the
  * 16 MiB return-value limit and the 32,000 documents-scanned limit,
  * even for large tables like `bookKnowledge`.
+ *
+ * Internal-only: this reads every row of any table including `users`
+ * and `inviteCodes`, so it must never be reachable over the public API.
+ * Run it via `npx convex run audit:getTableChunk '<args>'`, which uses
+ * real deployment credentials instead of a request-supplied secret.
  */
-export const getTableChunk = query({
+export const getTableChunk = internalQuery({
   args: {
     table: AUDITABLE_TABLES,
     paginationOpts: paginationOptsValidator,
-    bypassKey: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const isBypass =
-      process.env.CONVEX_DEPLOYMENT_TYPE === "development" ||
-      (!!process.env.AUDIT_BYPASS_KEY &&
-        args.bypassKey === process.env.AUDIT_BYPASS_KEY);
-
-    if (!isBypass) {
-      const me = await getAuthenticatedUser(ctx);
-      requireAdmin(me);
-    }
-
     const result = await ctx.db
       .query(args.table)
       .paginate(args.paginationOpts);

@@ -1,5 +1,6 @@
 // convex/users.ts
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalMutation } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import {
   getAuthenticatedUser,
@@ -18,8 +19,6 @@ export const upsertCurrentUser = mutation({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
-
-    console.log("IDENTITY DEBUG:", JSON.stringify(identity));
 
     // Use verified identity claims
     const name = identity.name ?? "Unknown";
@@ -180,6 +179,89 @@ export const deleteUser = mutation({
       throw new Error("Cannot delete yourself.");
     }
 
+    const target = await ctx.db.get(args.targetUserId);
+    if (!target) throw new Error("User not found.");
+
     await ctx.db.delete(args.targetUserId);
+
+    // Unassign any clients who had this user as their trainer, so
+    // getMyClients/etc. don't dangle on a deleted trainerId.
+    if (target.role === "trainer") {
+      const orphanedClients = await ctx.db
+        .query("users")
+        .withIndex("by_trainer", (q) => q.eq("trainerId", args.targetUserId))
+        .collect();
+      for (const clientDoc of orphanedClients) {
+        await ctx.db.patch(clientDoc._id, { trainerId: undefined });
+      }
+    }
+
+    // Cascade-delete the user's fitness data in the background, batched the
+    // same way message cleanup is (see chat.deleteMessagesBatch).
+    for (const table of USER_SCOPED_TABLES) {
+      await ctx.scheduler.runAfter(0, internal.users.deleteUserDataBatch, {
+        userId: args.targetUserId,
+        table,
+      });
+    }
+    await ctx.scheduler.runAfter(0, internal.users.deleteUserConversationsBatch, {
+      userId: args.targetUserId,
+    });
+  },
+});
+
+const USER_SCOPED_TABLES = [
+  "workouts",
+  "cardioLogs",
+  "bodyMetrics",
+  "nutritionLogs",
+  "progressPhotos",
+] as const;
+
+export const deleteUserDataBatch = internalMutation({
+  args: {
+    userId: v.id("users"),
+    table: v.union(
+      v.literal("workouts"),
+      v.literal("cardioLogs"),
+      v.literal("bodyMetrics"),
+      v.literal("nutritionLogs"),
+      v.literal("progressPhotos")
+    ),
+  },
+  handler: async (ctx, args) => {
+    const batchSize = 100;
+    const batch = await ctx.db
+      .query(args.table)
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .take(batchSize);
+
+    for (const doc of batch) await ctx.db.delete(doc._id);
+
+    if (batch.length === batchSize) {
+      await ctx.scheduler.runAfter(0, internal.users.deleteUserDataBatch, args);
+    }
+  },
+});
+
+export const deleteUserConversationsBatch = internalMutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const batchSize = 20;
+    const batch = await ctx.db
+      .query("conversations")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .take(batchSize);
+
+    for (const convo of batch) {
+      await ctx.scheduler.runAfter(0, internal.chat.deleteMessagesBatch, {
+        conversationId: convo._id,
+      });
+      await ctx.db.delete(convo._id);
+    }
+
+    if (batch.length === batchSize) {
+      await ctx.scheduler.runAfter(0, internal.users.deleteUserConversationsBatch, args);
+    }
   },
 });

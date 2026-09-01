@@ -1,4 +1,5 @@
 import { createReadStream } from "fs";
+import { execFileSync } from "child_process";
 import { parse } from "csv-parse";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -14,14 +15,37 @@ const CONVEX_URL = process.env.VITE_CONVEX_URL || process.env.CONVEX_URL;
 const HF_TOKEN = process.env.HF_TOKEN;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CSV_PATH = path.resolve(__dirname, "../book_knowledge.csv");
+const REPO_ROOT = path.resolve(__dirname, "..");
+const prod = process.argv.includes("--prod");
 
 if (!CONVEX_URL || !HF_TOKEN) {
   console.error("Missing CONVEX_URL or HF_TOKEN environment variables.");
   process.exit(1);
 }
 
+// getLatestChunkIndex is a public, unauthenticated read (no sensitive data),
+// so it's still fine to call over the plain HTTP client.
 const client = new ConvexHttpClient(CONVEX_URL);
 const hf = new HfInference(HF_TOKEN);
+
+/**
+ * addChunk/addChunks/clearChunks write straight into the corpus fed into the
+ * AI's system prompt, so they're internalMutations — not reachable over the
+ * public API. Running them via `npx convex run` uses real deployment
+ * credentials (the same ones needed to deploy this project) instead of an
+ * unauthenticated public mutation anyone with the deployment URL could call.
+ */
+function runConvexMutation(functionName: string, args: Record<string, unknown>): any {
+  const cliArgs = ["convex", "run", functionName, JSON.stringify(args)];
+  if (prod) cliArgs.push("--prod");
+  const output = execFileSync("npx", cliArgs, {
+    cwd: REPO_ROOT,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "inherit"],
+  });
+  const trimmed = output.trim();
+  return trimmed ? JSON.parse(trimmed) : null;
+}
 
 interface CsvRow {
   book_title: string;
@@ -60,14 +84,8 @@ async function main() {
 
   if (resetMode) {
     console.log("[load] --reset flag detected. Clearing existing chunks...");
-    let deletedTotal = 0;
-    while (true) {
-      const deleted = await client.mutation(api.chat.clearChunks);
-      if (deleted === 0) break;
-      deletedTotal += deleted;
-      process.stdout.write(`\r[load] Deleted ${deletedTotal} chunks...`);
-    }
-    console.log("\n[load] Clear complete.");
+    runConvexMutation("chat:clearChunks", {});
+    console.log("[load] Clear scheduled — it runs in batches server-side, so give it a few seconds before reloading.");
   }
 
   // 1. Get current state to resume
@@ -125,7 +143,7 @@ async function main() {
         embedding: embeddings[index],
       }));
 
-      await client.mutation(api.chat.addChunks, { chunks: payload });
+      runConvexMutation("chat:addChunks", { chunks: payload });
 
       console.log(`Success (${i + chunkBatch.length}/${allRows.length} chunks)`);
       
