@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom'; // 1. Import the portal engine
 import { useAction, useMutation } from 'convex/react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { api } from '../../../convex/_generated/api';
 import type { Id } from '../../../convex/_generated/dataModel';
 import { useCurrentUser } from '../hooks/useCurrentUser';
@@ -16,6 +18,53 @@ interface FloatingChatProps {
     isOpen: boolean;
     onClose: () => void;
 }
+
+const ChatMarkdown: React.FC<{ content: string }> = ({ content }) => (
+    <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+            p: ({ children }) => <p className="whitespace-pre-wrap break-words mb-1.5 last:mb-0">{children}</p>,
+            strong: ({ children }) => <strong className="font-semibold text-white">{children}</strong>,
+            em: ({ children }) => <em className="italic">{children}</em>,
+            a: ({ children, href }) => (
+                <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2 hover:text-primary-hover break-words">
+                    {children}
+                </a>
+            ),
+            ul: ({ children }) => <ul className="list-disc pl-4 mb-1.5 space-y-0.5 last:mb-0">{children}</ul>,
+            ol: ({ children }) => <ol className="list-decimal pl-4 mb-1.5 space-y-0.5 last:mb-0">{children}</ol>,
+            li: ({ children }) => <li className="whitespace-pre-wrap break-words">{children}</li>,
+            h1: ({ children }) => <h1 className="text-[0.95rem] font-bold text-white mt-2 mb-1 first:mt-0">{children}</h1>,
+            h2: ({ children }) => <h2 className="text-[0.88rem] font-bold text-white mt-2 mb-1 first:mt-0">{children}</h2>,
+            h3: ({ children }) => <h3 className="text-[0.82rem] font-bold text-white mt-1.5 mb-1 first:mt-0">{children}</h3>,
+            blockquote: ({ children }) => (
+                <blockquote className="border-l-2 border-primary/60 pl-2 my-1.5 text-slate-300 italic">{children}</blockquote>
+            ),
+            hr: () => <hr className="my-2 border-white/10" />,
+            code: ({ children, className }) => {
+                const isBlock = /language-/.test(className || '');
+                return isBlock ? (
+                    <code className={`block whitespace-pre-wrap break-words ${className || ''}`}>{children}</code>
+                ) : (
+                    <code className="bg-white/10 rounded px-1 py-0.5 text-[0.75rem] font-mono break-words">{children}</code>
+                );
+            },
+            pre: ({ children }) => (
+                <pre className="bg-slate-950/70 border border-white/10 rounded-lg p-2 my-1.5 overflow-x-auto text-[0.75rem] font-mono">{children}</pre>
+            ),
+            table: ({ children }) => (
+                <div className="overflow-x-auto my-1.5">
+                    <table className="w-full border-collapse text-[0.75rem]">{children}</table>
+                </div>
+            ),
+            thead: ({ children }) => <thead className="border-b border-white/15">{children}</thead>,
+            th: ({ children }) => <th className="text-left font-semibold text-white px-1.5 py-1 whitespace-nowrap">{children}</th>,
+            td: ({ children }) => <td className="px-1.5 py-1 border-t border-white/[0.06] align-top">{children}</td>,
+        }}
+    >
+        {content}
+    </ReactMarkdown>
+);
 
 const FloatingChat: React.FC<FloatingChatProps> = ({ isOpen, onClose }) => {
     const [messages, setMessages] = useState<Message[]>([]);
@@ -161,7 +210,11 @@ const FloatingChat: React.FC<FloatingChatProps> = ({ isOpen, onClose }) => {
                                     : 'bg-slate-850/80 border border-white/[0.06] text-slate-100 rounded-2xl rounded-bl-md'
                                     }`}
                             >
-                                <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                                {msg.role === 'assistant' ? (
+                                    <ChatMarkdown content={msg.content} />
+                                ) : (
+                                    <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                                )}
                                 {msg.sources && msg.sources.length > 0 && (
                                     <div className="mt-1.5 pt-1.5 border-t border-white/10">
                                         <p className="text-[10px] text-white/50 mb-1">Sources:</p>

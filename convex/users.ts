@@ -1,7 +1,9 @@
 // convex/users.ts
-import { query, mutation, internalMutation } from "./_generated/server";
+import { query, mutation, internalMutation, internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
+import type { MutationCtx } from "./_generated/server";
+import type { Doc, Id } from "./_generated/dataModel";
 import {
   getAuthenticatedUser,
   getAuthenticatedUserOrNull,
@@ -113,7 +115,77 @@ export const setUserRole = mutation({
       }
     }
 
-    await ctx.db.patch(args.targetUserId, { role: args.role });
+    // Any role change resolves a pending trainer request one way or another
+    // (granting trainer fulfills it; anything else supersedes it).
+    await ctx.db.patch(args.targetUserId, {
+      role: args.role,
+      trainerRequestedAt: undefined,
+    });
+  },
+});
+
+// ─────────────────────────────────────────────────────────────
+// Client — request trainer access (admin still has to approve it)
+// ─────────────────────────────────────────────────────────────
+
+export const requestTrainerAccess = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const me = await getAuthenticatedUser(ctx);
+
+    if (me.role !== "client") {
+      throw new Error("Only client accounts can request trainer access.");
+    }
+    if (me.trainerRequestedAt !== undefined) {
+      throw new Error("You already have a pending trainer request.");
+    }
+
+    await ctx.db.patch(me._id, { trainerRequestedAt: Date.now() });
+  },
+});
+
+export const cancelTrainerRequest = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const me = await getAuthenticatedUser(ctx);
+
+    if (me.trainerRequestedAt === undefined) {
+      throw new Error("You don't have a pending trainer request.");
+    }
+
+    await ctx.db.patch(me._id, { trainerRequestedAt: undefined });
+  },
+});
+
+// ─────────────────────────────────────────────────────────────
+// Admin — review pending trainer requests
+// ─────────────────────────────────────────────────────────────
+
+export const listPendingTrainerRequests = query({
+  args: {},
+  handler: async (ctx) => {
+    const me = await getAuthenticatedUser(ctx);
+    requireAdmin(me);
+
+    return await ctx.db
+      .query("users")
+      .withIndex("by_trainer_request", (q) => q.gt("trainerRequestedAt", 0))
+      .collect();
+  },
+});
+
+export const denyTrainerRequest = mutation({
+  args: { targetUserId: v.id("users") },
+  handler: async (ctx, args) => {
+    const me = await getAuthenticatedUser(ctx);
+    requireAdmin(me);
+
+    const target = await ctx.db.get(args.targetUserId);
+    if (!target || target.trainerRequestedAt === undefined) {
+      throw new Error("No pending trainer request for this user.");
+    }
+
+    await ctx.db.patch(args.targetUserId, { trainerRequestedAt: undefined });
   },
 });
 
@@ -182,31 +254,90 @@ export const deleteUser = mutation({
     const target = await ctx.db.get(args.targetUserId);
     if (!target) throw new Error("User not found.");
 
-    await ctx.db.delete(args.targetUserId);
+    await cascadeDeleteUser(ctx, target);
 
-    // Unassign any clients who had this user as their trainer, so
-    // getMyClients/etc. don't dangle on a deleted trainerId.
-    if (target.role === "trainer") {
-      const orphanedClients = await ctx.db
-        .query("users")
-        .withIndex("by_trainer", (q) => q.eq("trainerId", args.targetUserId))
-        .collect();
-      for (const clientDoc of orphanedClients) {
-        await ctx.db.patch(clientDoc._id, { trainerId: undefined });
-      }
-    }
-
-    // Cascade-delete the user's fitness data in the background, batched the
-    // same way message cleanup is (see chat.deleteMessagesBatch).
-    for (const table of USER_SCOPED_TABLES) {
-      await ctx.scheduler.runAfter(0, internal.users.deleteUserDataBatch, {
-        userId: args.targetUserId,
-        table,
-      });
-    }
-    await ctx.scheduler.runAfter(0, internal.users.deleteUserConversationsBatch, {
-      userId: args.targetUserId,
+    // Also remove the underlying Clerk account, so the two stores can't
+    // drift apart (deleted-in-app user could otherwise still sign back in).
+    await ctx.scheduler.runAfter(0, internal.users.deleteClerkUser, {
+      clerkId: target.clerkId,
     });
+  },
+});
+
+// ─────────────────────────────────────────────────────────────
+// Clerk → Convex sync — called from the clerk webhook (convex/http.ts)
+// when a user is deleted directly in Clerk, so their Convex data
+// doesn't outlive their account.
+// ─────────────────────────────────────────────────────────────
+
+export const deleteUserByClerkId = internalMutation({
+  args: { clerkId: v.string() },
+  handler: async (ctx, args) => {
+    const target = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
+      .unique();
+
+    // Nothing to do — user never signed in, or was already removed.
+    if (!target) return;
+
+    await cascadeDeleteUser(ctx, target);
+  },
+});
+
+async function cascadeDeleteUser(ctx: MutationCtx, target: Doc<"users">) {
+  await ctx.db.delete(target._id);
+
+  // Unassign any clients who had this user as their trainer, so
+  // getMyClients/etc. don't dangle on a deleted trainerId.
+  if (target.role === "trainer") {
+    const orphanedClients = await ctx.db
+      .query("users")
+      .withIndex("by_trainer", (q) => q.eq("trainerId", target._id))
+      .collect();
+    for (const clientDoc of orphanedClients) {
+      await ctx.db.patch(clientDoc._id, { trainerId: undefined });
+    }
+  }
+
+  // Cascade-delete the user's fitness data in the background, batched the
+  // same way message cleanup is (see chat.deleteMessagesBatch).
+  for (const table of USER_SCOPED_TABLES) {
+    await ctx.scheduler.runAfter(0, internal.users.deleteUserDataBatch, {
+      userId: target._id,
+      table,
+    });
+  }
+  await ctx.scheduler.runAfter(0, internal.users.deleteUserConversationsBatch, {
+    userId: target._id,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+// Convex → Clerk sync — deletes the Clerk-side account when an admin
+// deletes the user from within the app.
+// ─────────────────────────────────────────────────────────────
+
+export const deleteClerkUser = internalAction({
+  args: { clerkId: v.string() },
+  handler: async (_ctx, args) => {
+    const secretKey = process.env.CLERK_SECRET_KEY;
+    if (!secretKey) {
+      console.error("CLERK_SECRET_KEY not set — skipping Clerk-side user deletion.");
+      return;
+    }
+
+    const res = await fetch(`https://api.clerk.com/v1/users/${args.clerkId}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${secretKey}` },
+    });
+
+    // 404 means the Clerk account is already gone — not an error here.
+    if (!res.ok && res.status !== 404) {
+      console.error(
+        `Failed to delete Clerk user ${args.clerkId}: ${res.status} ${await res.text()}`
+      );
+    }
   },
 });
 

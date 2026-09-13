@@ -114,7 +114,11 @@ component.
   don't read from `@theme` at all — a full recolor means editing each chart
   file individually. `FloatingChat.tsx` also hardcodes its gradient
   (`linear-gradient(135deg, #f97316, #ea580c)`) inline rather than
-  referencing `--color-primary`.
+  referencing `--color-primary`. `LandingBackground.tsx` mostly reads live
+  from the theme (`var(--color-primary)` for the network lines/nodes), but
+  its two secondary glow blobs hardcode `rgba(193, 117, 74, ...)` directly
+  in the `<style>` block — a `--color-primary` change needs matching edits
+  there too, same as the shadow-glow tokens.
 
 ---
 
@@ -148,8 +152,10 @@ to match or the glow will look mismatched against the new brand color.
 | Cards | `components/ui/Card.tsx` | Just wires `className` onto `.glass-card` — no independent styling |
 | Buttons | `components/ui/Button.tsx` | `variants` (primary/secondary/danger/ghost) and `sizes` objects — edit here to change all buttons of a given kind at once |
 | Inputs | `components/ui/Input.tsx` | Base input styling, label styling |
-| Sidebar + topbar | `components/DashboardLayout.tsx` | Nav active/inactive states, breadcrumb pattern, brand mark |
+| Sidebar + topbar | `components/DashboardLayout.tsx` | Nav active/inactive states, breadcrumb pattern, brand mark, profile popover (incl. Sign Out) |
 | Floating chat | `components/FloatingChat.tsx` | Fully inline-styled, separate from the rest of the design system (see bypass note above) |
+| Landing page | `pages/Landing.tsx` | Public signed-out page: nav, hero, feature grid, trainer/client section, CTA, footer — built from `Card`/`Button`/`.eyebrow`, no bypasses |
+| Landing background | `components/LandingBackground.tsx` | Animated hero backdrop (crossfading SVG "frame" network + drifting blur blobs); styled via a component-scoped `<style>` tag, not Tailwind utilities — see color bypass note above |
 
 Page-level files (`pages/WorkoutLog.tsx`, `pages/CardioTracker.tsx`, etc.)
 mix `Card`/`Button`/`Input` with a lot of one-off `className` styling

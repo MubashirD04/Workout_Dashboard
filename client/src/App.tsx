@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { SignedIn, SignedOut, RedirectToSignIn } from '@clerk/clerk-react';
+import { SignedIn, SignedOut } from '@clerk/clerk-react';
 import DashboardLayout from './components/DashboardLayout';
+import Landing from './pages/Landing';
 import WorkoutLog from './pages/WorkoutLog';
 import CardioTracker from './pages/CardioTracker';
 import BodyMetrics from './pages/BodyMetrics';
@@ -14,30 +15,33 @@ import ClaimInvite from './pages/Auth/ClaimInvite';
 import Profile from './pages/Profile';
 
 import { UserSync } from './components/UserSync';
+import { AthleteProfileGate } from './components/AthleteProfileGate';
 
 function App() {
   return (
     <Router>
       <SignedIn>
         <UserSync />
-        <DashboardLayout>
-          <Routes>
-            <Route path="/" element={<DashboardHome />} />
-            <Route path="/workouts" element={<WorkoutLog />} />
-            <Route path="/cardio" element={<CardioTracker />} />
-            <Route path="/metrics" element={<BodyMetrics />} />
-            <Route path="/nutrition" element={<NutritionTracker />} />
-            <Route path="/photos" element={<ProgressPhotos />} />
-            <Route path="/admin" element={<AdminPanel />} />
-            <Route path="/clients" element={<ClientsView />} />
-            <Route path="/clients/:clientId" element={<ClientDetail />} />
-            <Route path="/invite/:code" element={<ClaimInvite />} />
-            <Route path="/profile" element={<Profile />} />
-          </Routes>
-        </DashboardLayout>
+        <AthleteProfileGate>
+          <DashboardLayout>
+            <Routes>
+              <Route path="/" element={<DashboardHome />} />
+              <Route path="/workouts" element={<WorkoutLog />} />
+              <Route path="/cardio" element={<CardioTracker />} />
+              <Route path="/metrics" element={<BodyMetrics />} />
+              <Route path="/nutrition" element={<NutritionTracker />} />
+              <Route path="/photos" element={<ProgressPhotos />} />
+              <Route path="/admin" element={<AdminPanel />} />
+              <Route path="/clients" element={<ClientsView />} />
+              <Route path="/clients/:clientId" element={<ClientDetail />} />
+              <Route path="/invite/:code" element={<ClaimInvite />} />
+              <Route path="/profile" element={<Profile />} />
+            </Routes>
+          </DashboardLayout>
+        </AthleteProfileGate>
       </SignedIn>
       <SignedOut>
-        <RedirectToSignIn/>
+        <Landing />
       </SignedOut>
     </Router>
   );

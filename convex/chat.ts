@@ -3,6 +3,7 @@ import { query, mutation, action, internalQuery, internalMutation } from "./_gen
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { getAuthenticatedUser } from "./lib/auth";
+import { logError } from "./logs";
 
 declare const process: { env: Record<string, string | undefined> };
 
@@ -352,9 +353,22 @@ export const askQuestion = action({
 
     // SECURITY: Cap how often the caller (not the target) can invoke this —
     // each call is a billed HF + Groq request with no other cost control.
-    await ctx.runMutation(internal.chat.recordAiRequest, {
-      tokenIdentifier: identity.tokenIdentifier,
-    });
+    try {
+      await ctx.runMutation(internal.chat.recordAiRequest, {
+        tokenIdentifier: identity.tokenIdentifier,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (message.startsWith("Rate limit exceeded")) {
+        await ctx.runMutation(internal.logs.writeLog, {
+          level: "warn",
+          source: "chat.askQuestion",
+          message,
+          metadata: { tokenIdentifier: identity.tokenIdentifier, targetUserId: args.targetUserId },
+        });
+      }
+      throw err;
+    }
 
     const hfToken = process.env.HF_TOKEN;
     if (!hfToken) throw new Error("HF_TOKEN is not set in Convex environment");
@@ -375,7 +389,11 @@ export const askQuestion = action({
           ? (output as number[][]).flat()
           : (output as number[]);
         break;
-      } catch {
+      } catch (err) {
+        await logError(ctx, "chat.askQuestion", err, {
+          api: "huggingface",
+          attempt: attempt + 1,
+        });
         if (attempt < 2) {
           // Wait 5s, then 10s before the final attempt
           await new Promise((r) => setTimeout(r, 5000 * (attempt + 1)));
@@ -450,30 +468,37 @@ INSTRUCTIONS:
     const groqApiKey = process.env.GROQ_API_KEY;
     if (!groqApiKey) throw new Error("GROQ_API_KEY is not set in Convex environment");
 
-    const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${groqApiKey}`,
-      },
-      body: JSON.stringify({
-        model: "openai/gpt-oss-20b",
-        messages: [
-          { role: "system", content: systemMessage },
-          { role: "user", content: args.question },
-        ],
-        temperature: 0.7,
-        max_tokens: 1024,
-        top_p: 0.9,
-      }),
-    });
+    let groqData: any;
+    try {
+      const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${groqApiKey}`,
+        },
+        body: JSON.stringify({
+          model: "openai/gpt-oss-20b",
+          messages: [
+            { role: "system", content: systemMessage },
+            { role: "user", content: args.question },
+          ],
+          temperature: 0.7,
+          max_tokens: 1024,
+          top_p: 0.9,
+        }),
+      });
 
-    if (!groqRes.ok) {
-      const errText = await groqRes.text();
-      throw new Error(`Groq API failed: ${errText}`);
+      if (!groqRes.ok) {
+        const errText = await groqRes.text();
+        throw new Error(`Groq API failed: ${errText}`);
+      }
+
+      groqData = await groqRes.json();
+    } catch (err) {
+      await logError(ctx, "chat.askQuestion", err, { api: "groq" });
+      throw err;
     }
 
-    const groqData = await groqRes.json();
     const answer = groqData.choices?.[0]?.message?.content;
     if (!answer) throw new Error("No answer returned from Groq");
 

@@ -1,8 +1,9 @@
 import React from 'react';
-import { usePaginatedQuery, useMutation } from "convex/react";
+import { usePaginatedQuery, useMutation, useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
+import LogViewer from './LogViewer';
 
 const AdminPanel: React.FC = () => {
     const { results: users, status, loadMore } = usePaginatedQuery(
@@ -11,6 +12,8 @@ const AdminPanel: React.FC = () => {
         { initialNumItems: 20 }
     );
     const setRole = useMutation(api.users.setUserRole);
+    const pendingRequests = useQuery((api as any).users.listPendingTrainerRequests);
+    const denyRequest = useMutation((api as any).users.denyTrainerRequest);
 
     if (status === "LoadingFirstPage") return <div className="text-white">Loading users...</div>;
 
@@ -20,6 +23,42 @@ const AdminPanel: React.FC = () => {
                 <h2 className="text-3xl font-bold text-white">Admin Panel</h2>
                 <p className="text-slate-400">Manage users and system roles</p>
             </header>
+
+            {pendingRequests && pendingRequests.length > 0 && (
+                <div className="space-y-3">
+                    <h3 className="text-sm font-bold text-amber-400/90 uppercase tracking-wide">
+                        Trainer requests ({pendingRequests.length})
+                    </h3>
+                    <div className="grid gap-3">
+                        {pendingRequests.map((req: any) => (
+                            <Card key={req._id} className="p-4 flex items-center justify-between ring-1 ring-amber-500/25">
+                                <div>
+                                    <p className="font-bold text-white">{req.name}</p>
+                                    <p className="text-sm text-slate-400">{req.email}</p>
+                                    <p className="text-xs text-slate-500 mt-1">
+                                        Requested {new Date(req.trainerRequestedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                    </p>
+                                </div>
+                                <div className="flex gap-2">
+                                    <Button
+                                        size="sm"
+                                        onClick={() => setRole({ targetUserId: req._id, role: 'trainer' })}
+                                    >
+                                        Approve
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant="secondary"
+                                        onClick={() => denyRequest({ targetUserId: req._id })}
+                                    >
+                                        Deny
+                                    </Button>
+                                </div>
+                            </Card>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             <div className="grid gap-4">
                 {users.map((user: any) => (
@@ -62,6 +101,8 @@ const AdminPanel: React.FC = () => {
             {status === "LoadingMore" && (
                 <div className="text-center py-4 text-slate-500">Loading more...</div>
             )}
+
+            <LogViewer />
         </div>
     );
 };

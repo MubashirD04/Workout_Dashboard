@@ -39,8 +39,10 @@ A multi-user fitness tracking dashboard with:
 
 ## Key Features
 
-- **Authentication**: Clerk sign-in; first user becomes admin; others default to client.
+- **Landing Page**: Public marketing page (`client/src/pages/Landing.tsx`) shown to signed-out visitors, with an animated vector-network hero background (`LandingBackground.tsx`) and modal Sign In / Get Started CTAs (Clerk).
+- **Authentication**: Clerk sign-in; first user becomes admin; others default to client. Sign out is available from the sidebar profile popover and the profile page.
 - **Trainer Onboarding**: Trainers generate invite codes; clients claim codes at `/invite/:code` to link to their trainer.
+- **Trainer Access Requests**: There's no self-serve trainer signup — a client requests trainer access from `/profile`, and an admin approves or denies it from the Admin Panel. Approving just promotes their role; denying leaves them a client.
 - **Workout Logging**: Tracks exercises (nested), sets, reps, and weight.
 - **Cardio Tracking**: Logs distance, duration, and type.
 - **Body Metrics**: Tracks weight, height, and body measurements.

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import FloatingChat from './FloatingChat';
-import { UserButton } from "@clerk/clerk-react";
+import { UserButton, SignOutButton } from "@clerk/clerk-react";
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import ErrorBoundary from './ErrorBoundary';
 
@@ -275,6 +275,16 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                                 </svg>
                             </Link>
+                            <SignOutButton redirectUrl="/">
+                                <button
+                                    className="w-full flex items-center justify-center gap-1.5 mt-1.5 py-2 rounded-lg bg-white/5 text-slate-400 text-xs font-bold uppercase tracking-wider hover:bg-red-500/10 hover:text-red-400 transition-colors outline-none focus:outline-none"
+                                >
+                                    Sign Out
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M16 17l5-5-5-5M21 12H9M13 21H6a2 2 0 01-2-2V5a2 2 0 012-2h7" />
+                                    </svg>
+                                </button>
+                            </SignOutButton>
                         </div>
                     )}
                 </div>

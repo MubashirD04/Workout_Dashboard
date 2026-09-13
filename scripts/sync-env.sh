@@ -10,9 +10,16 @@
 #
 # After editing a local .env file, run: scripts/sync-env.sh push
 # then commit the changed files under secrets/.
+#
+# secrets/*.enc are whole-file swaps, not something to line-merge, so
+# .gitattributes marks them merge=keeptheirs. This registers that driver
+# locally (git config only, not shareable via .gitattributes) so a
+# conflicting merge always takes the incoming encrypted file as-is.
 
 set -euo pipefail
 cd "$(dirname "$0")/.."
+
+git config --local merge.keeptheirs.driver 'cp -f "%B" "%A"'
 
 AGE_RECIPIENT="age1hlys9mvee80wekaaawd3gntte4m3fxpyq3xt4mhxlx739nvw2f7sekhs2q"
 
