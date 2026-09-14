@@ -186,10 +186,15 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                 {/* Brand */}
                 <div className="flex items-center gap-3 px-5 pt-6 pb-5">
                     <div className="w-9 h-9 rounded-xl bg-primary shadow-glow-sm flex items-center justify-center shrink-0">
-                        <span className="font-black text-white text-sm">FT</span>
+                        <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth={4}
+                            strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-white">
+                            <path d="M10 34 A16 16 0 1 1 38 34" />
+                            <line x1="24" y1="24" x2="33" y2="13" />
+                            <circle cx="24" cy="24" r="2.4" fill="currentColor" stroke="none" />
+                        </svg>
                     </div>
                     <div className="leading-tight min-w-0">
-                        <p className="text-base font-bold text-white tracking-tight truncate">FitTrack</p>
+                        <p className="text-base font-bold text-white tracking-tight truncate">Gauge</p>
                         <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest truncate">Performance suite</p>
                     </div>
                 </div>

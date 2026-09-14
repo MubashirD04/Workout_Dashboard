@@ -77,10 +77,15 @@ const Landing: React.FC = () => {
                 <div className="max-w-6xl mx-auto px-5 sm:px-8 h-16 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-lg bg-primary shadow-glow-sm flex items-center justify-center shrink-0">
-                            <span className="font-black text-white text-xs">FT</span>
+                            <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth={4}
+                                strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-white">
+                                <path d="M10 34 A16 16 0 1 1 38 34" />
+                                <line x1="24" y1="24" x2="33" y2="13" />
+                                <circle cx="24" cy="24" r="2.4" fill="currentColor" stroke="none" />
+                            </svg>
                         </div>
                         <div className="leading-tight">
-                            <p className="text-sm font-bold text-white tracking-tight">FitTrack</p>
+                            <p className="text-sm font-bold text-white tracking-tight">Gauge</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2 sm:gap-3">
@@ -107,7 +112,7 @@ const Landing: React.FC = () => {
                             Train with data,<br /> not guesswork.
                         </h1>
                         <p className="mt-6 text-base sm:text-lg text-slate-400 max-w-xl leading-relaxed">
-                            FitTrack brings your workouts, cardio, nutrition, body metrics and progress
+                            Gauge brings your workouts, cardio, nutrition, body metrics and progress
                             photos into one dashboard — plus an AI coach that knows both the science
                             and your own training history.
                         </p>
@@ -217,11 +222,16 @@ const Landing: React.FC = () => {
                 <div className="max-w-6xl mx-auto px-5 sm:px-8 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
                     <div className="flex items-center gap-2.5">
                         <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center shrink-0">
-                            <span className="font-black text-white text-[10px]">FT</span>
+                            <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth={5}
+                                strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3 text-white">
+                                <path d="M10 34 A16 16 0 1 1 38 34" />
+                                <line x1="24" y1="24" x2="33" y2="13" />
+                                <circle cx="24" cy="24" r="2.4" fill="currentColor" stroke="none" />
+                            </svg>
                         </div>
-                        <span className="text-xs font-semibold text-slate-500">FitTrack</span>
+                        <span className="text-xs font-semibold text-slate-500">Gauge</span>
                     </div>
-                    <p className="text-xs text-slate-600">&copy; {new Date().getFullYear()} FitTrack. All rights reserved.</p>
+                    <p className="text-xs text-slate-600">&copy; {new Date().getFullYear()} Gauge. All rights reserved.</p>
                 </div>
             </footer>
         </div>

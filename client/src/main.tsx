@@ -3,8 +3,6 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 
-console.log('Mounting React application');
-
 import { ClerkProvider, useAuth } from "@clerk/clerk-react";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { ConvexReactClient } from "convex/react";
