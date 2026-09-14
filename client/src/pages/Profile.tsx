@@ -6,6 +6,7 @@ import { useCurrentUser } from '../hooks/useCurrentUser';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { AthleteProfileForm, ATHLETE_PROFILE_ATTRIBUTES, type AthleteProfileRatings } from '../components/AthleteProfileForm';
+import { getErrorMessage } from '../utils/errorUtils';
 
 const ROLE_LABELS: Record<string, string> = {
     admin: 'Administrator',
@@ -16,17 +17,17 @@ const ROLE_LABELS: Record<string, string> = {
 const Profile: React.FC = () => {
     const { user, isLoading } = useCurrentUser();
     const athleteProfile = useQuery(
-        (api as any).athleteProfile.getMyAthleteProfile,
+        api.athleteProfile.getMyAthleteProfile,
         user ? {} : 'skip'
     );
-    const upsertAthleteProfile = useMutation((api as any).athleteProfile.upsertMyAthleteProfile);
+    const upsertAthleteProfile = useMutation(api.athleteProfile.upsertMyAthleteProfile);
     const [savingAthleteProfile, setSavingAthleteProfile] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
     const [savedAt, setSavedAt] = useState<number | null>(null);
     const [athleteProfileExpanded, setAthleteProfileExpanded] = useState(false);
 
-    const requestTrainerAccess = useMutation((api as any).users.requestTrainerAccess);
-    const cancelTrainerRequest = useMutation((api as any).users.cancelTrainerRequest);
+    const requestTrainerAccess = useMutation(api.users.requestTrainerAccess);
+    const cancelTrainerRequest = useMutation(api.users.cancelTrainerRequest);
     const [trainerRequestSubmitting, setTrainerRequestSubmitting] = useState(false);
     const [trainerRequestError, setTrainerRequestError] = useState<string | null>(null);
 
@@ -36,7 +37,7 @@ const Profile: React.FC = () => {
         try {
             await requestTrainerAccess();
         } catch (err) {
-            setTrainerRequestError(err instanceof Error ? err.message : 'Could not submit your request.');
+            setTrainerRequestError(getErrorMessage(err, 'Could not submit your request.'));
         } finally {
             setTrainerRequestSubmitting(false);
         }
@@ -48,7 +49,7 @@ const Profile: React.FC = () => {
         try {
             await cancelTrainerRequest();
         } catch (err) {
-            setTrainerRequestError(err instanceof Error ? err.message : 'Could not cancel your request.');
+            setTrainerRequestError(getErrorMessage(err, 'Could not cancel your request.'));
         } finally {
             setTrainerRequestSubmitting(false);
         }
@@ -65,7 +66,7 @@ const Profile: React.FC = () => {
             await upsertAthleteProfile(ratings);
             setSavedAt(Date.now());
         } catch (err) {
-            setSaveError(err instanceof Error ? err.message : 'Could not save your athlete profile.');
+            setSaveError(getErrorMessage(err, 'Could not save your athlete profile.'));
         } finally {
             setSavingAthleteProfile(false);
         }

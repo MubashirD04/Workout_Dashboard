@@ -16,7 +16,7 @@ const LogViewer: React.FC = () => {
     const [level, setLevel] = useState<LogLevel | "all">("all");
 
     const { results: logs, status, loadMore } = usePaginatedQuery(
-        (api as any).logs.getRecentLogs,
+        api.logs.getRecentLogs,
         level === "all" ? {} : { level },
         { initialNumItems: 20 }
     );
@@ -45,11 +45,11 @@ const LogViewer: React.FC = () => {
                 <div className="text-slate-500 text-sm">No logs found.</div>
             ) : (
                 <div className="grid gap-2">
-                    {logs.map((log: any) => (
+                    {logs.map((log) => (
                         <Card key={log._id} className="p-3">
                             <div className="flex items-center justify-between gap-3">
                                 <div className="flex items-center gap-2 min-w-0">
-                                    <span className={`text-xs px-2 py-0.5 rounded shrink-0 ${LEVEL_STYLES[log.level as LogLevel]}`}>
+                                    <span className={`text-xs px-2 py-0.5 rounded shrink-0 ${LEVEL_STYLES[log.level]}`}>
                                         {log.level.toUpperCase()}
                                     </span>
                                     <span className="text-xs text-slate-500 shrink-0">{log.source}</span>

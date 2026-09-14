@@ -10,13 +10,12 @@ import {
     ComposedChart
 } from 'recharts';
 
+// Only the fields the chart reads; distance/duration are optional in the schema.
 interface CardioLog {
-    id: number;
     date: string;
     type: string;
-    distance: number;
-    duration: number;
-    time: string | null;
+    distance?: number;
+    duration?: number;
 }
 
 interface Props {
@@ -47,7 +46,7 @@ const CardioProgressChart: React.FC<Props> = ({ logs }) => {
             .filter(log => log.type === selectedType)
             .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
             .map(log => {
-                const pace = log.distance > 0 ? parseFloat((log.duration / log.distance).toFixed(2)) : 0;
+                const pace = log.distance && log.duration ? parseFloat((log.duration / log.distance).toFixed(2)) : 0;
                 return {
                     date: new Date(log.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
                     distance: log.distance,

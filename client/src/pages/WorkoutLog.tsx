@@ -8,6 +8,7 @@ import { Card } from '../components/ui/Card';
 import { usePaginatedQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
+import { getErrorMessage } from '../utils/errorUtils';
 
 interface Exercise {
     exercise_name: string;
@@ -34,7 +35,7 @@ const WorkoutLog: React.FC<WorkoutLogProps> = ({ targetUserId }) => {
     const { isAuthenticated } = useConvexAuth();
     const queryArgs = targetUserId ? { targetUserId } : {};
     const { results: rawWorkouts, status, loadMore } = usePaginatedQuery(
-        (api as any).workouts.getWorkouts,
+        api.workouts.getWorkouts,
         isAuthenticated ? queryArgs: "skip",
         { initialNumItems: 10 }
     );
@@ -113,9 +114,9 @@ const WorkoutLog: React.FC<WorkoutLogProps> = ({ targetUserId }) => {
 
             resetForm();
             alert(editingWorkoutId ? 'Workout updated!' : 'Workout saved!');
-        } catch (error: any) {
+        } catch (error) {
             console.error('Error saving/updating workout:', error);
-            alert(error.message || `Failed to ${editingWorkoutId ? 'update' : 'save'} workout`);
+            alert(getErrorMessage(error, `Failed to ${editingWorkoutId ? 'update' : 'save'} workout`));
         }
     };
 
@@ -387,7 +388,7 @@ const WorkoutLog: React.FC<WorkoutLogProps> = ({ targetUserId }) => {
                     </div>
                 </Card>
 
-                {workouts.length > 0 && <WorkoutMaxWeightChart workouts={workouts as any} />}
+                {workouts.length > 0 && <WorkoutMaxWeightChart workouts={workouts} />}
             </div>
 
             {/* Right Column: Recent History (4 cols) */}
@@ -447,7 +448,7 @@ const WorkoutLog: React.FC<WorkoutLogProps> = ({ targetUserId }) => {
 
                                     {workout.exercises && workout.exercises.length > 0 && (
                                         <div className="border-t border-white/5 pt-3 space-y-1">
-                                            {workout.exercises.map((ex: any, idx: number) => (
+                                            {workout.exercises.map((ex, idx) => (
                                                 <div key={idx} className="flex justify-between text-xs">
                                                     <span className="text-slate-300 font-medium truncate">{ex.exercise_name}</span>
                                                     <span className="text-slate-500 whitespace-nowrap ml-2">{ex.sets} × {ex.reps} @ {ex.weight}kg</span>

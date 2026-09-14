@@ -48,7 +48,8 @@ A multi-user fitness tracking dashboard with:
 - **Body Metrics**: Tracks weight, height, and body measurements.
 - **Nutrition**: Monitors daily calorie and macro intake.
 - **Progress Photos**: Visual timeline of physical progress (client-only access).
-- **Admin Panel**: Manage user roles and trainer–client assignments.
+- **Athlete Profile Onboarding**: On first sign-in, users rate themselves (1–10) on power, speed, cardio, endurance, flexibility, and effectiveness before reaching the dashboard. These ratings drive the dashboard radar chart and can be edited from `/profile`.
+- **Admin Panel**: Approve/deny trainer requests, change user roles, assign clients to trainers, delete users (with typed confirmation; also removes their Clerk account), and browse application logs.
 - **AI Coach**: RAG-enhanced chatbot with access to professional fitness knowledge and personal user data.
 
 ---

@@ -4,22 +4,23 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
+import { getErrorMessage } from '../../utils/errorUtils';
 
 const ClaimInvite: React.FC = () => {
     const { code } = useParams<{ code: string }>();
     const navigate = useNavigate();
     const [error, setError] = useState<string | null>(null);
 
-    const preview = useQuery((api as any).inviteCodes.previewInviteCode, { code: code || "" });
-    const claim = useMutation((api as any).inviteCodes.claimInviteCode);
+    const preview = useQuery(api.inviteCodes.previewInviteCode, { code: code || "" });
+    const claim = useMutation(api.inviteCodes.claimInviteCode);
 
     const handleClaim = async () => {
         if (!code) return;
         try {
             await claim({ code });
             navigate('/');
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err) {
+            setError(getErrorMessage(err, "Couldn't claim this invite code. Please try again."));
         }
     };
 

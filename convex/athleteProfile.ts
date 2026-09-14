@@ -2,7 +2,7 @@
 // Self-rated athlete profile (Power/Speed/Cardio/Endurance/Flexibility/Effectiveness),
 // captured once at onboarding and editable afterwards from the profile page.
 import { query, mutation } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { getAuthenticatedUser } from "./lib/auth";
 
 const RATING_FIELDS = [
@@ -42,7 +42,7 @@ export const upsertMyAthleteProfile = mutation({
     for (const field of RATING_FIELDS) {
       const value = args[field];
       if (!Number.isFinite(value) || value < 1 || value > 10) {
-        throw new Error(`${field} must be a number between 1 and 10.`);
+        throw new ConvexError(`${field} must be a number between 1 and 10.`);
       }
     }
 

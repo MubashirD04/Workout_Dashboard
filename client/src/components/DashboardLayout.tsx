@@ -124,11 +124,15 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     const [chatOpen, setChatOpen] = useState(false);
     const profileRef = useRef<HTMLDivElement>(null);
 
-    // Close the mobile drawer automatically whenever the route changes.
-    useEffect(() => {
+    // Close the mobile drawer and profile popover whenever the route changes.
+    // Adjusted during render rather than in an effect, to avoid an extra
+    // render pass with the stale open state.
+    const [lastPathname, setLastPathname] = useState(location.pathname);
+    if (lastPathname !== location.pathname) {
+        setLastPathname(location.pathname);
         setMobileNavOpen(false);
         setProfileOpen(false);
-    }, [location.pathname]);
+    }
 
     useEffect(() => {
         if (!profileOpen) return;

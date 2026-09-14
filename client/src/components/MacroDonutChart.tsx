@@ -15,7 +15,7 @@ const MacroDonutChart = () => {
     const { isAuthenticated } = useConvexAuth();
 
     const { results: logs, status } = usePaginatedQuery(
-        (api as any).nutritionLogs.getNutritionLogs,
+        api.nutritionLogs.getNutritionLogs,
         isAuthenticated ? {} : "skip",
         { initialNumItems: 60 }
     );
@@ -31,7 +31,7 @@ const MacroDonutChart = () => {
         }
 
         const totals = logs.reduce(
-            (acc, log: any) => ({
+            (acc, log) => ({
                 protein: acc.protein + (log.protein || 0),
                 carbs: acc.carbs + (log.carbs || 0),
                 fat: acc.fat + (log.fat || 0),

@@ -17,7 +17,7 @@ export const AthleteProfileGate: React.FC<AthleteProfileGateProps> = ({ children
     // Wait for the Convex user row to exist (UserSync's upsert) before querying
     // athleteProfile — getAuthenticatedUser throws if the user row isn't there yet.
     const profile = useQuery(
-        (api as any).athleteProfile.getMyAthleteProfile,
+        api.athleteProfile.getMyAthleteProfile,
         user ? {} : 'skip'
     );
 

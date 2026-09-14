@@ -23,7 +23,7 @@ const ProgressPhotos: React.FC<ProgressPhotosProps> = ({ targetUserId }) => {
     const { isAuthenticated } = useConvexAuth();
     const queryArgs = targetUserId ? { targetUserId } : {};
     const { results: rawLogs, status, loadMore } = usePaginatedQuery(
-        (api as any).progressPhotos.getProgressPhotos,
+        api.progressPhotos.getProgressPhotos,
         isAuthenticated ? queryArgs: "skip",
         { initialNumItems: 6 }
     );

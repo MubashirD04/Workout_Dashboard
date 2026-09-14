@@ -22,11 +22,11 @@ const DashboardHome: React.FC = () => {
     const { isAuthenticated } = useConvexAuth();
 
     const { results: rawWorkouts } = usePaginatedQuery(
-        (api as any).workouts.getWorkouts,
+        api.workouts.getWorkouts,
         isAuthenticated ? {} : 'skip',
         { initialNumItems: 100 }
     );
-    const workouts = rawWorkouts || [];
+    const workouts = useMemo(() => rawWorkouts || [], [rawWorkouts]);
 
     const { currentWeekVolume, weekOverWeekChange } = useMemo(() => {
         const now = new Date();
@@ -37,7 +37,7 @@ const DashboardHome: React.FC = () => {
         let current = 0;
         let previous = 0;
 
-        workouts.forEach((w: any) => {
+        workouts.forEach((w) => {
             if (!w.date) return;
             const wDate = parseDateOnly(w.date);
             const vol = calculateWorkoutVolume(w.exercises);

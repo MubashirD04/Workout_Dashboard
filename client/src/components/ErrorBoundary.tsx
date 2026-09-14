@@ -4,6 +4,9 @@ import { Button } from './ui/Button';
 
 interface ErrorBoundaryProps {
     children: React.ReactNode;
+    // Replaces the full-page error card — use for sections that should fail
+    // without taking the rest of the page down with them.
+    fallback?: (retry: () => void) => React.ReactNode;
 }
 
 interface ErrorBoundaryState {
@@ -31,6 +34,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 
     render() {
         if (this.state.hasError) {
+            if (this.props.fallback) return this.props.fallback(this.handleRetry);
             return (
                 <Card className="p-8 flex flex-col items-center text-center gap-4 max-w-md mx-auto mt-10">
                     <div className="p-3 rounded-full bg-red-500/10 text-red-400">

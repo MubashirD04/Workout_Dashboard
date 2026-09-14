@@ -1,0 +1,38 @@
+#!/bin/sh
+# Pre-commit: typecheck (client + Convex backend) and lint before committing.
+# Enabled per clone by `npm install` at the repo root (the "prepare" script sets
+# core.hooksPath=.githooks). CI runs the same checks, so skipping this with
+# `git commit --no-verify` only defers the failure.
+
+# Only run when the commit touches code the checks cover.
+if ! git diff --cached --name-only --diff-filter=ACMRD | grep -qE '^(client/|convex/)'; then
+  exit 0
+fi
+
+# GUI git clients (VS Code's Source Control, GitHub Desktop) launched from the
+# Dock don't inherit the shell PATH, so npm isn't found. Add the usual install
+# locations: Homebrew (Apple Silicon/Intel), Volta, and the newest nvm version.
+PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.volta/bin:$PATH"
+if [ -d "$HOME/.nvm/versions/node" ]; then
+  NVM_BIN="$(ls -d "$HOME"/.nvm/versions/node/*/bin 2>/dev/null | sort -V | tail -n 1)"
+  [ -n "$NVM_BIN" ] && PATH="$NVM_BIN:$PATH"
+fi
+export PATH
+
+if ! command -v npm >/dev/null 2>&1; then
+  echo "pre-commit: npm not found on PATH ($PATH)." >&2
+  echo "pre-commit: commit from a terminal, or bypass with 'git commit --no-verify'." >&2
+  exit 1
+fi
+
+if [ ! -d client/node_modules ]; then
+  echo "pre-commit: client/node_modules missing — run 'npm install' in client/ first." >&2
+  exit 1
+fi
+
+echo "pre-commit: running typecheck + lint (npm run check)..."
+if ! npm --prefix client run check --silent; then
+  echo "" >&2
+  echo "pre-commit: checks failed — fix the errors above, or bypass with 'git commit --no-verify'." >&2
+  exit 1
+fi

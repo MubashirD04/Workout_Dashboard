@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { createPortal } from 'react-dom'; // 1. Import the portal engine
 import { useAction, useMutation } from 'convex/react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { api } from '../../../convex/_generated/api';
 import type { Id } from '../../../convex/_generated/dataModel';
 import { useCurrentUser } from '../hooks/useCurrentUser';
+import { getErrorMessage } from '../utils/errorUtils';
 
 interface Message {
     id?: number;
@@ -116,10 +116,10 @@ const FloatingChat: React.FC<FloatingChatProps> = ({ isOpen, onClose }) => {
                 ...prev,
                 { role: 'assistant', content: response.answer, sources: response.sources },
             ]);
-        } catch (error: any) {
+        } catch (error) {
             setMessages(prev => [
                 ...prev,
-                { role: 'assistant', content: error?.message || 'Something went wrong. Please try again.' },
+                { role: 'assistant', content: getErrorMessage(error, 'Something went wrong. Please try again.') },
             ]);
         } finally {
             setLoading(false);

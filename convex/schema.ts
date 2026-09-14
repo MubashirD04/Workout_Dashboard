@@ -149,12 +149,19 @@ export default defineSchema({
 
   // Audit logs for sensitive actions
   auditLogs: defineTable({
-    actorId: v.id("users"),
+    // Unset for system-initiated events (e.g. a Clerk webhook deletion).
+    actorId: v.optional(v.id("users")),
     action: v.string(),
+    // Derived from `action` by recordAudit (see AUDIT_ACTIONS in audit.ts) so
+    // the admin viewer can filter by category through an index. Optional only
+    // for rows written before categories existed.
+    category: v.optional(v.string()),
     targetId: v.optional(v.string()),
     metadata: v.optional(v.any()),
     timestamp: v.number(),
-  }).index("by_timestamp", ["timestamp"]),
+  })
+    .index("by_timestamp", ["timestamp"])
+    .index("by_category_and_timestamp", ["category", "timestamp"]),
 
   // One row per askQuestion call, used to rate-limit the AI coach per user
   // (it's billed to Groq/HF and does a vector search per call).

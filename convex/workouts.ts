@@ -1,7 +1,7 @@
 // convex/workouts.ts
 import { query, mutation } from "./_generated/server";
 import { paginationOptsValidator } from "convex/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { getAuthenticatedUser, assertCanReadUserData, assertCanWriteUserData } from "./lib/auth";
 import type { Id } from "./_generated/dataModel";
 
@@ -80,7 +80,7 @@ export const createWorkout = mutation({
         .first();
 
       if (existing) {
-        throw new Error("A workout already exists at this date and time.");
+        throw new ConvexError("A workout already exists at this date and time.");
       }
     }
 

@@ -1,6 +1,7 @@
 // convex/inviteCodes.ts
 import { query, mutation } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
+import { recordAudit } from "./audit";
 import {
   getAuthenticatedUser,
   requireTrainerOrAdmin,
@@ -40,7 +41,7 @@ export const generateInviteCode = mutation({
     const unusedCount = activeCodes.filter(c => !c.usedBy && c.expiresAt > Date.now()).length;
     
     if (unusedCount >= 10) {
-      throw new Error("Maximum of 10 active invite codes reached. Revoke an unused code to create a new one.");
+      throw new ConvexError("Maximum of 10 active invite codes reached. Revoke an unused code to create a new one.");
     }
 
     const now = Date.now();
@@ -92,7 +93,7 @@ export const revokeInviteCode = mutation({
     if (code.trainerId !== me._id && me.role !== "admin") {
       throw new Error("Forbidden: not your invite code.");
     }
-    if (code.usedBy) throw new Error("Code already used, cannot revoke.");
+    if (code.usedBy) throw new ConvexError("Code already used, cannot revoke.");
 
     await ctx.db.delete(args.codeId);
   },
@@ -133,10 +134,10 @@ export const claimInviteCode = mutation({
     const me = await getAuthenticatedUser(ctx);
 
     if (me.role !== "client") {
-      throw new Error("Only clients can claim invite codes.");
+      throw new ConvexError("Only clients can claim invite codes.");
     }
     if (me.trainerId) {
-      throw new Error("You are already assigned to a trainer.");
+      throw new ConvexError("You are already assigned to a trainer.");
     }
 
     // SECURITY: This block is a single ACID transaction in Convex.
@@ -147,9 +148,9 @@ export const claimInviteCode = mutation({
       .withIndex("by_code", (q) => q.eq("code", args.code.toUpperCase()))
       .unique();
 
-    if (!record) throw new Error("Invalid invite code.");
-    if (record.usedBy) throw new Error("This code has already been used.");
-    if (record.expiresAt < Date.now()) throw new Error("This invite code has expired.");
+    if (!record) throw new ConvexError("Invalid invite code.");
+    if (record.usedBy) throw new ConvexError("This code has already been used.");
+    if (record.expiresAt < Date.now()) throw new ConvexError("This invite code has expired.");
 
     const now = Date.now();
 
@@ -158,6 +159,13 @@ export const claimInviteCode = mutation({
 
     // Mark code as used
     await ctx.db.patch(record._id, { usedBy: me._id, usedAt: now });
+
+    await recordAudit(ctx, {
+      actorId: me._id,
+      action: "user.assignTrainer",
+      targetId: me._id,
+      metadata: { targetName: me.name, from: null, to: record.trainerId, via: "inviteCode" },
+    });
 
     const trainer = await ctx.db.get(record.trainerId);
     return { success: true, trainerName: trainer?.name };

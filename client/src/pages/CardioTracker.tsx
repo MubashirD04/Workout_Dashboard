@@ -28,7 +28,7 @@ const CardioTracker: React.FC<CardioTrackerProps> = ({ targetUserId }) => {
     const { isAuthenticated } = useConvexAuth();
     const queryArgs = targetUserId ? { targetUserId } : {};
     const { results: rawLogs, status, loadMore } = usePaginatedQuery(
-        (api as any).cardioLogs.getCardioLogs,
+        api.cardioLogs.getCardioLogs,
         isAuthenticated ? queryArgs: "skip",
         { initialNumItems: 10 }
     );
@@ -266,7 +266,7 @@ const CardioTracker: React.FC<CardioTrackerProps> = ({ targetUserId }) => {
             </Card>
 
             {/* Cardio Trends Chart */}
-            {logs.length > 0 && <CardioProgressChart logs={logs as any} />}
+            {logs.length > 0 && <CardioProgressChart logs={logs} />}
 
             {/* History Table */}
             <Card className="overflow-hidden">
@@ -290,7 +290,7 @@ const CardioTracker: React.FC<CardioTrackerProps> = ({ targetUserId }) => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
-                            {(logs as any[]).map((log: any) => (
+                            {logs.map((log) => (
                                 <tr
                                     key={log._id}
                                     onClick={() => loadLogForEdit(log)}

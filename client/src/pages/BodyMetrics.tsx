@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
     LineChart,
     Line,
@@ -39,7 +39,7 @@ const BodyMetrics: React.FC<BodyMetricsProps> = ({ targetUserId }) => {
     const { isAuthenticated } = useConvexAuth();
     const queryArgs = targetUserId ? { targetUserId } : {};
     const { results: rawMetrics, status, loadMore } = usePaginatedQuery(
-        (api as any).bodyMetrics.getBodyMetrics,
+        api.bodyMetrics.getBodyMetrics,
         isAuthenticated ? queryArgs: "skip",
         { initialNumItems: 50 } // Fetch more for the chart
     );
@@ -63,15 +63,14 @@ const BodyMetrics: React.FC<BodyMetricsProps> = ({ targetUserId }) => {
 
     const [isExpanded, setIsExpanded] = useState(false);
 
-    // Auto-populate height from latest log
-    useEffect(() => {
-        if (metrics.length > 0 && !height) {
-            const latestHeight = metrics[metrics.length - 1].height;
-            if (latestHeight) {
-                setHeight(latestHeight.toString());
-            }
-        }
-    }, [metrics, height]);
+    // Prefill height once from the latest log. Only once, so a user who
+    // clears the field isn't immediately overwritten again.
+    const latestHeight = metrics.length > 0 ? metrics[metrics.length - 1].height : undefined;
+    const [heightPrefilled, setHeightPrefilled] = useState(false);
+    if (!heightPrefilled && latestHeight) {
+        setHeightPrefilled(true);
+        setHeight((current) => current || latestHeight.toString());
+    }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

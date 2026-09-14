@@ -1,7 +1,7 @@
 // convex/chat.ts
 import { query, mutation, action, internalQuery, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { getAuthenticatedUser } from "./lib/auth";
 import { logError } from "./logs";
 
@@ -311,7 +311,7 @@ export const recordAiRequest = internalMutation({
       .collect();
 
     if (recentCount.length >= AI_RATE_LIMIT_MAX_REQUESTS) {
-      throw new Error(
+      throw new ConvexError(
         `Rate limit exceeded: max ${AI_RATE_LIMIT_MAX_REQUESTS} AI questions per ${AI_RATE_LIMIT_WINDOW_MS / 60000} minutes. Please wait and try again.`
       );
     }
@@ -358,8 +358,13 @@ export const askQuestion = action({
         tokenIdentifier: identity.tokenIdentifier,
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      if (message.startsWith("Rate limit exceeded")) {
+      // The limiter throws ConvexError (so the message reaches the user on prod);
+      // check its data first, falling back to the message text.
+      const message =
+        err instanceof ConvexError && typeof err.data === "string"
+          ? err.data
+          : err instanceof Error ? err.message : String(err);
+      if (message.includes("Rate limit exceeded")) {
         await ctx.runMutation(internal.logs.writeLog, {
           level: "warn",
           source: "chat.askQuestion",

@@ -9,7 +9,7 @@ import { useEffect } from "react";
  */
 export function UserSync() {
   const { user, isSignedIn } = useUser();
-  const upsert = useMutation((api as any).users.upsertCurrentUser);
+  const upsert = useMutation(api.users.upsertCurrentUser);
 
   useEffect(() => {
     if (isSignedIn && user) {

@@ -21,6 +21,8 @@ Previously highlighted risks concerning unbounded query scans in user-activity l
 ---
 
 > [!NOTE]
+> `athleteProfiles` (one row per user) and `logs` (operational logs, pruned after 30 days by `crons.ts`) were also added after this scan and aren't in the table below.
+>
 > A 12th table, `aiRequestLog` (per-user AI rate-limit counters), was added after this scan ran. Re-run the audit to include it. Rows are never pruned once written, so it grows one row per `askQuestion` call indefinitely — worth a periodic cleanup batch (same recursive-scheduler pattern as `deleteMessagesBatch`) once it shows up as a real row count here.
 
 ## Table Scan Results

@@ -7,6 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "typecheck": "tsc -b",
+    "typecheck:convex": "tsc -p ../convex --noEmit --types node --typeRoots ./node_modules/@types",
+    "check": "npm run typecheck && npm run typecheck:convex && npm run lint",
     "preview": "vite preview"
   },
   "dependencies": {

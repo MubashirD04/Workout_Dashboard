@@ -16,7 +16,7 @@ const ATTRIBUTE_LABELS = ['Power', 'Speed', 'Cardio', 'Endurance', 'Flexibility'
 const AthleteRadarChart = () => {
     const { user, isLoading: userLoading } = useCurrentUser();
     const profile = useQuery(
-        (api as any).athleteProfile.getMyAthleteProfile,
+        api.athleteProfile.getMyAthleteProfile,
         user ? {} : 'skip'
     );
 

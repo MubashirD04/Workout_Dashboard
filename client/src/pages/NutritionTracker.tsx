@@ -25,7 +25,7 @@ const NutritionTracker: React.FC<NutritionTrackerProps> = ({ targetUserId }) => 
     const { isAuthenticated } = useConvexAuth();
     const queryArgs = targetUserId ? { targetUserId } : {};
     const { results: rawLogs, status, loadMore } = usePaginatedQuery(
-        (api as any).nutritionLogs.getNutritionLogs,
+        api.nutritionLogs.getNutritionLogs,
         isAuthenticated ? queryArgs: "skip",
         { initialNumItems: 10 }
     );

@@ -1,4 +1,6 @@
-export const calculateWorkoutVolume = (exercises: any[] = []) => {
+type VolumeExercise = { sets: number; reps: number; weight: number };
+
+export const calculateWorkoutVolume = (exercises: VolumeExercise[] = []) => {
     if (!exercises) return 0;
     return exercises.reduce((acc, ex) => acc + (ex.sets * ex.reps * ex.weight), 0);
 };

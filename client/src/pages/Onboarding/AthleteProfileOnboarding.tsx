@@ -5,6 +5,7 @@ import { Card } from '../../components/ui/Card';
 import { AthleteProfileForm, type AthleteProfileRatings } from '../../components/AthleteProfileForm';
 import LandingBackground from '../../components/LandingBackground';
 import { useCurrentUser } from '../../hooks/useCurrentUser';
+import { getErrorMessage } from '../../utils/errorUtils';
 
 // Shown once, before the dashboard, for any signed-in user with no athlete
 // profile row yet. Blocking by design — see docs/context.md "Known Frontend
@@ -13,7 +14,7 @@ import { useCurrentUser } from '../../hooks/useCurrentUser';
 // after signing up feels like a continuation of the marketing page, not a gate.
 const AthleteProfileOnboarding: React.FC = () => {
     const { user } = useCurrentUser();
-    const upsert = useMutation((api as any).athleteProfile.upsertMyAthleteProfile);
+    const upsert = useMutation(api.athleteProfile.upsertMyAthleteProfile);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -25,7 +26,7 @@ const AthleteProfileOnboarding: React.FC = () => {
             // No manual navigation needed: getMyAthleteProfile is reactive, so
             // the gate re-renders into the dashboard as soon as this resolves.
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
+            setError(getErrorMessage(err, 'Something went wrong. Please try again.'));
         } finally {
             setSubmitting(false);
         }

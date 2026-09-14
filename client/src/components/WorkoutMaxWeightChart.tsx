@@ -17,8 +17,8 @@ interface Exercise {
     weight: number;
 }
 
+// Only the fields the chart reads, so Convex workout docs pass straight in.
 interface Workout {
-    id: number;
     date: string;
     exercises?: Exercise[];
 }
