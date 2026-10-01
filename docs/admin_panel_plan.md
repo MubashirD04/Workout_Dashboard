@@ -5,7 +5,7 @@
 ## Already done
 
 - Admin route guard: `/admin` redirects non-admins to `/` before any admin-only query mounts.
-- `LogViewer` wrapped in its own `ErrorBoundary` (new optional `fallback` prop), so a log failure no longer blanks the page.
+- `LogViewer` wrapped in its own `ErrorBoundary` (new optional `fallback` prop), so a log failure no longer blanks the page. 
 - Mutation errors in the Admin Panel are awaited and caught. They show in a dismissible banner, and the row's buttons are disabled while a request is in flight.
 - Removed the `(api as any)` casts from `AdminPanel`, `LogViewer`, and `useCurrentUser`.
 - `tsc -b` build fixed (unused imports in `FloatingChat.tsx` and `convex/users.ts`).
