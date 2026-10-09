@@ -140,7 +140,7 @@ const FloatingChat: React.FC<FloatingChatProps> = ({ isOpen, onClose }) => {
 
     return (
         <div
-            className={`fixed z-[9999] bottom-6 right-6 w-[calc(100%-3rem)] sm:w-[380px] h-[600px] max-h-[calc(100vh-120px)] flex flex-col transition-all duration-300 ease-in-out ${isOpen
+            className={`fixed z-[9999] bottom-6 right-6 w-[calc(100%-3rem)] sm:w-[380px] h-[600px] max-h-[calc(100dvh-120px)] flex flex-col transition-all duration-300 ease-in-out ${isOpen
                     ? 'opacity-100 translate-y-0 pointer-events-auto'
                     : 'opacity-0 translate-y-8 pointer-events-none'
                 }`}
@@ -259,7 +259,7 @@ const FloatingChat: React.FC<FloatingChatProps> = ({ isOpen, onClose }) => {
                             onKeyDown={handleKeyDown}
                             placeholder="Ask me anything..."
                             disabled={loading}
-                            className="flex-1 min-h-[2.2rem] max-h-[120px] resize-none overflow-hidden bg-slate-850/80 border border-white/10 rounded-xl px-3 py-2 text-[0.8rem] leading-relaxed text-white placeholder:text-slate-500 outline-none focus:border-primary transition-colors"
+                            className="flex-1 min-h-[2.2rem] max-h-[120px] resize-none overflow-hidden bg-slate-850/80 border border-white/10 rounded-xl px-3 py-2 text-base sm:text-[0.8rem] leading-relaxed text-white placeholder:text-slate-500 outline-none focus:border-primary transition-colors"
                         />
                         <button
                             onClick={handleSend}

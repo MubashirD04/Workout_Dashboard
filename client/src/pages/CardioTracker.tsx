@@ -199,7 +199,7 @@ const CardioTracker: React.FC<CardioTrackerProps> = ({ targetUserId }) => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                             <div>
                                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 text-center md:text-left">Activity Type</label>
-                                <div className="grid grid-cols-4 gap-2">
+                                <div className="grid grid-cols-2 min-[420px]:grid-cols-4 gap-2">
                                     {cardioTypes.slice(0, 8).map((t) => (
                                         <button
                                             key={t}
